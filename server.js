@@ -8,7 +8,7 @@ const path = require("path");
 const os   = require("os");
 const { WebSocketServer } = require("ws");
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -29,8 +29,8 @@ let indiceCor = 0;
 let clients = new Map();
 
 // ── Estado do jogo ────────────────────────────────────────────
-let palavras   = [];      // lista de palavras cadastradas pelo admin
-let jogoAtivo  = false;   // true enquanto um jogo está rolando
+let palavras  = [];   // lista de palavras cadastradas pelo admin
+let jogoAtivo = false;
 
 // ── Servidor HTTP ─────────────────────────────────────────────
 const httpServer = http.createServer((req, res) => {
@@ -49,7 +49,6 @@ const httpServer = http.createServer((req, res) => {
 // ── Servidor WebSocket ────────────────────────────────────────
 const wss = new WebSocketServer({ server: httpServer });
 
-// Envia para todos os clientes conectados
 function broadcast(dados) {
   const msg = JSON.stringify(dados);
   for (const [ws] of clients) {
@@ -57,12 +56,10 @@ function broadcast(dados) {
   }
 }
 
-// Envia apenas para um cliente específico
 function enviarPara(ws, dados) {
   if (ws.readyState === 1) ws.send(JSON.stringify(dados));
 }
 
-// Envia a lista de usuários online para todos
 function enviarListaUsuarios() {
   const usuarios = [...clients.values()].map(c => ({
     name: c.name, color: c.color, isAdmin: c.isAdmin
@@ -70,7 +67,6 @@ function enviarListaUsuarios() {
   broadcast({ type: "user_list", users: usuarios });
 }
 
-// Envia a lista de palavras apenas para o admin
 function enviarPalavrasParaAdmin() {
   for (const [ws, cliente] of clients) {
     if (cliente.isAdmin) {
@@ -83,46 +79,25 @@ function enviarPalavrasParaAdmin() {
 wss.on("connection", (ws) => {
   const cor = CORES[indiceCor % CORES.length];
   indiceCor++;
-
-  // O primeiro usuário a se conectar é o admin
   const ehAdmin = clients.size === 0;
   clients.set(ws, { name: null, color: cor, isAdmin: ehAdmin });
 
-  // ── Receber mensagens ────────────────────────────────────────
   ws.on("message", (raw) => {
     let dados;
     try { dados = JSON.parse(raw); } catch { return; }
-
     const cliente = clients.get(ws);
 
-    // ── join: usuário escolheu um nome ────────────────────────
+    // ── join ──────────────────────────────────────────────────
     if (dados.type === "join") {
       const nome = String(dados.name || "Anônimo").slice(0, 20);
       cliente.name = nome;
       clients.set(ws, cliente);
-
-      // Informa o cliente seus próprios dados (incluindo se é admin)
-      enviarPara(ws, {
-        type: "welcome",
-        name: nome,
-        color: cliente.color,
-        isAdmin: cliente.isAdmin
-      });
-
-      // Se for admin, manda também a lista de palavras já cadastradas
-      if (cliente.isAdmin) {
-        enviarPara(ws, { type: "word_list", words: palavras });
-      }
-
-      broadcast({
-        type: "system",
-        text: `${nome} entrou no chat`,
-        time: new Date().toISOString()
-      });
-
+      enviarPara(ws, { type: "welcome", name: nome, color: cliente.color, isAdmin: cliente.isAdmin });
+      if (cliente.isAdmin) enviarPara(ws, { type: "word_list", words: palavras });
+      broadcast({ type: "system", text: `${nome} entrou no chat`, time: new Date().toISOString() });
       enviarListaUsuarios();
 
-    // ── message: mensagem de chat normal ─────────────────────
+    // ── message ───────────────────────────────────────────────
     } else if (dados.type === "message") {
       if (!cliente.name) return;
       broadcast({
@@ -130,28 +105,34 @@ wss.on("connection", (ws) => {
         from: cliente.name,
         color: cliente.color,
         text: String(dados.text || "").slice(0, 2000),
-        time: new Date().toISOString()
+        time: new Date().toISOString(),
+        // Repassa os dados de resposta, se houver
+        replyTo: dados.replyTo || null
       });
 
-    // ── add_word: admin adicionou uma palavra à lista ─────────
+    // ── add_word ──────────────────────────────────────────────
     } else if (dados.type === "add_word") {
-      if (!cliente.isAdmin) return; // só admin pode fazer isso
+      if (!cliente.isAdmin) return;
       const palavra = String(dados.word || "").trim().slice(0, 50);
-      if (!palavra || palavras.includes(palavra)) return; // ignora vazia ou duplicada
+      if (!palavra || palavras.includes(palavra)) return;
       palavras.push(palavra);
-      enviarPalavrasParaAdmin(); // atualiza o painel do admin
+      enviarPalavrasParaAdmin();
 
-    // ── remove_word: admin removeu uma palavra ────────────────
+    // ── remove_word ───────────────────────────────────────────
     } else if (dados.type === "remove_word") {
       if (!cliente.isAdmin) return;
       palavras = palavras.filter(p => p !== dados.word);
       enviarPalavrasParaAdmin();
 
-    // ── start_game: admin iniciou o jogo ─────────────────────
+    // ── reset_words: admin limpou toda a lista ────────────────
+    } else if (dados.type === "reset_words") {
+      if (!cliente.isAdmin) return;
+      palavras = []; // esvazia o array
+      enviarPalavrasParaAdmin();
+
+    // ── start_game ────────────────────────────────────────────
     } else if (dados.type === "start_game") {
       if (!cliente.isAdmin) return;
-
-      // Precisa de pelo menos 2 jogadores e 1 palavra
       const jogadores = [...clients.values()].filter(c => c.name);
       if (jogadores.length < 2) {
         enviarPara(ws, { type: "game_error", text: "Precisa de pelo menos 2 jogadores." });
@@ -161,38 +142,18 @@ wss.on("connection", (ws) => {
         enviarPara(ws, { type: "game_error", text: "Adicione pelo menos uma palavra." });
         return;
       }
-
       jogoAtivo = true;
-
-      // Sorteia uma palavra aleatória da lista
       const palavraEscolhida = palavras[Math.floor(Math.random() * palavras.length)];
-
-      // Sorteia um impostor aleatório entre os jogadores
-      const impostorIndex = Math.floor(Math.random() * jogadores.length);
-      const impostorNome  = jogadores[impostorIndex].name;
-
-      // Avisa no chat que o jogo começou (sem revelar nada)
-      broadcast({
-        type: "system",
-        text: "🎮 O jogo começou! Verifique sua tela.",
-        time: new Date().toISOString()
-      });
-
-      // Envia o resultado individualmente para cada jogador
+      const impostorIndex    = Math.floor(Math.random() * jogadores.length);
+      const impostorNome     = jogadores[impostorIndex].name;
+      broadcast({ type: "system", text: "🎮 Jogo do Impostor começou! Verifique sua tela.", time: new Date().toISOString() });
       for (const [wsJogador, dadosJogador] of clients) {
         if (!dadosJogador.name) continue;
-
         const ehImpostor = dadosJogador.name === impostorNome;
-
-        enviarPara(wsJogador, {
-          type: "game_start",
-          isImpostor: ehImpostor,
-          // O impostor recebe palavra null (não sabe a palavra)
-          word: ehImpostor ? null : palavraEscolhida
-        });
+        enviarPara(wsJogador, { type: "game_start", isImpostor: ehImpostor, word: ehImpostor ? null : palavraEscolhida });
       }
 
-    // ── end_game: admin encerrou o jogo ──────────────────────
+    // ── end_game ──────────────────────────────────────────────
     } else if (dados.type === "end_game") {
       if (!cliente.isAdmin) return;
       jogoAtivo = false;
@@ -204,9 +165,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     const cliente = clients.get(ws);
     clients.delete(ws);
-
     if (cliente && cliente.name) {
-      // Se o admin saiu, o próximo usuário vira admin
       if (cliente.isAdmin && clients.size > 0) {
         const [proximoWs, proximoCliente] = clients.entries().next().value;
         proximoCliente.isAdmin = true;
@@ -214,7 +173,6 @@ wss.on("connection", (ws) => {
         enviarPara(proximoWs, { type: "promoted", words: palavras });
         broadcast({ type: "system", text: `${proximoCliente.name} agora é o admin.`, time: new Date().toISOString() });
       }
-
       broadcast({ type: "system", text: `${cliente.name} saiu do chat`, time: new Date().toISOString() });
       enviarListaUsuarios();
     }

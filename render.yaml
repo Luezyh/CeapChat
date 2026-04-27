@@ -3,10 +3,5 @@ services:
     name: ceap-chat-server
     env: node
     plan: free
-    buildCommand: npm install  # Certifique-se de ter um package.json
-    startCommand: node server.js
-    envVars:
-      - key: NODE_VERSION
-        value: 20.0.0
-      - key: PORT
-        value: 10000
+    buildCommand: npm install
+    startCommand: npm start
