@@ -8,7 +8,7 @@ const path = require("path");
 const os   = require("os");
 const { WebSocketServer } = require("ws");
 
-const PORT = 3000;
+const PORT = process.env.PORT || 10000;
 
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -188,9 +188,7 @@ wss.on("connection", (ws) => {
           type: "game_start",
           isImpostor: ehImpostor,
           // O impostor recebe palavra null (não sabe a palavra)
-          word: ehImpostor ? null : palavraEscolhida,
-          // Só o admin sabe quem é o impostor (para referência)
-          impostorName: dadosJogador.isAdmin ? impostorNome : null
+          word: ehImpostor ? null : palavraEscolhida
         });
       }
 
