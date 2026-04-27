@@ -1,188 +1,233 @@
 // ============================================================
-//  CEAP CHAT - Servidor
-//  Como funciona:
-//    1. Um servidor HTTP serve o arquivo index.html
-//    2. Um servidor WebSocket gerencia as conexões de chat
-//    3. Quando alguém manda mensagem, o servidor repassa
-//       para todos os outros conectados (broadcast)
+//  CEAP CHAT - Servidor com sistema de jogo
 // ============================================================
 
-const http = require("http"); // módulo nativo do Node para criar servidores HTTP
-const fs   = require("fs");   // módulo nativo para ler arquivos do disco
-const path = require("path"); // módulo nativo para montar caminhos de arquivos
-const os   = require("os");   // módulo nativo para informações do sistema (usado para pegar o IP)
-const { WebSocketServer } = require("ws"); // biblioteca de WebSocket (instale com: npm install ws)
+const http = require("http");
+const fs   = require("fs");
+const path = require("path");
+const os   = require("os");
+const { WebSocketServer } = require("ws");
 
-// ── Configurações gerais ─────────────────────────────────────
-const PORT = 3000; // porta onde o servidor vai rodar
+const PORT = 3000;
 
-// Função para descobrir o IP local da máquina automaticamente
-// Assim não precisa rodar ipconfig manualmente
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.values(interfaces)) {
     for (const iface of name) {
-      // Pega o primeiro endereço IPv4 que não seja loopback (127.0.0.1)
-      if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address;
-      }
+      if (iface.family === "IPv4" && !iface.internal) return iface.address;
     }
   }
-  return "localhost"; // fallback se não achar nenhum
+  return "localhost";
 }
 
-// ── Cores disponíveis para os usuários ───────────────────────
-// Cada usuário que entrar vai receber uma cor diferente
-// automaticamente, para diferenciar quem falou o quê
-const CORES = [
-  "#f97316", // laranja
-  "#3b82f6", // azul
-  "#22c55e", // verde
-  "#ec4899", // rosa
-  "#a855f7", // roxo
-  "#eab308", // amarelo
-  "#06b6d4", // ciano
-  "#ef4444", // vermelho
-];
-let indiceCor = 0; // controla qual cor será dada ao próximo usuário
+// ── Cores dos usuários ────────────────────────────────────────
+const CORES = ["#f97316","#3b82f6","#22c55e","#ec4899","#a855f7","#eab308","#06b6d4","#ef4444"];
+let indiceCor = 0;
 
-// ── Tabela de clientes conectados ────────────────────────────
-// Map é como uma tabela: associa cada conexão WebSocket
-// ao usuário dono dela.
-// Estrutura: ws (conexão) → { name: "João", color: "#f97316" }
+// ── Estado do chat ────────────────────────────────────────────
+// Map: ws → { name, color, isAdmin }
 let clients = new Map();
 
+// ── Estado do jogo ────────────────────────────────────────────
+let palavras   = [];      // lista de palavras cadastradas pelo admin
+let jogoAtivo  = false;   // true enquanto um jogo está rolando
+
 // ── Servidor HTTP ─────────────────────────────────────────────
-// Ele tem uma única função: entregar o index.html quando
-// alguém abre o endereço no navegador
 const httpServer = http.createServer((req, res) => {
   if (req.url === "/" || req.url === "/index.html") {
-    // Lê o arquivo index.html da mesma pasta que este server.js
     const filePath = path.join(__dirname, "index.html");
     fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end("Arquivo index.html não encontrado. Coloque-o na mesma pasta que server.js.");
-        return;
-      }
+      if (err) { res.writeHead(404); res.end("index.html não encontrado."); return; }
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(data);
     });
   } else {
-    res.writeHead(404);
-    res.end("Página não encontrada.");
+    res.writeHead(404); res.end("Não encontrado.");
   }
 });
 
 // ── Servidor WebSocket ────────────────────────────────────────
-// Roda junto com o HTTP na mesma porta.
-// Responsável por receber e redistribuir as mensagens do chat.
 const wss = new WebSocketServer({ server: httpServer });
 
-// ── Função de broadcast ───────────────────────────────────────
-// Envia uma mensagem para TODOS os usuários conectados.
-// Usada sempre que alguém manda algo no chat.
+// Envia para todos os clientes conectados
 function broadcast(dados) {
-  const msg = JSON.stringify(dados); // converte o objeto JS para texto JSON
-  for (const [ws] of clients) {     // percorre todos os clientes no Map
-    if (ws.readyState === 1) {       // readyState 1 = conexão ainda aberta
-      ws.send(msg);
-    }
+  const msg = JSON.stringify(dados);
+  for (const [ws] of clients) {
+    if (ws.readyState === 1) ws.send(msg);
   }
 }
 
-// ── Função de lista de usuários ───────────────────────────────
-// Monta e envia para todos a lista atualizada de quem está online.
-// Chamada sempre que alguém entra ou sai.
+// Envia apenas para um cliente específico
+function enviarPara(ws, dados) {
+  if (ws.readyState === 1) ws.send(JSON.stringify(dados));
+}
+
+// Envia a lista de usuários online para todos
 function enviarListaUsuarios() {
   const usuarios = [...clients.values()].map(c => ({
-    name: c.name,
-    color: c.color
+    name: c.name, color: c.color, isAdmin: c.isAdmin
   }));
   broadcast({ type: "user_list", users: usuarios });
 }
 
-// ── Eventos do WebSocket ──────────────────────────────────────
-// "connection" dispara toda vez que um novo navegador se conecta
-wss.on("connection", (ws) => {
+// Envia a lista de palavras apenas para o admin
+function enviarPalavrasParaAdmin() {
+  for (const [ws, cliente] of clients) {
+    if (cliente.isAdmin) {
+      enviarPara(ws, { type: "word_list", words: palavras });
+    }
+  }
+}
 
-  // Dá uma cor para este usuário e salva no Map
+// ── Lógica principal de conexão ───────────────────────────────
+wss.on("connection", (ws) => {
   const cor = CORES[indiceCor % CORES.length];
   indiceCor++;
-  clients.set(ws, { name: null, color: cor });
+
+  // O primeiro usuário a se conectar é o admin
+  const ehAdmin = clients.size === 0;
+  clients.set(ws, { name: null, color: cor, isAdmin: ehAdmin });
 
   // ── Receber mensagens ────────────────────────────────────────
-  // Dispara toda vez que este usuário manda qualquer coisa
   ws.on("message", (raw) => {
     let dados;
-    try {
-      dados = JSON.parse(raw); // tenta converter o texto recebido em objeto JS
-    } catch {
-      return; // se não for JSON válido, ignora
-    }
+    try { dados = JSON.parse(raw); } catch { return; }
 
-    const cliente = clients.get(ws); // pega as informações deste usuário no Map
+    const cliente = clients.get(ws);
 
-    // ── Tipo "join": usuário entrou com um nome ──────────────
+    // ── join: usuário escolheu um nome ────────────────────────
     if (dados.type === "join") {
-      const nome = String(dados.name || "Anônimo").slice(0, 20); // limita a 20 caracteres
+      const nome = String(dados.name || "Anônimo").slice(0, 20);
       cliente.name = nome;
-      clients.set(ws, cliente); // atualiza no Map
+      clients.set(ws, cliente);
 
-      // Manda de volta para este usuário suas próprias informações (nome e cor)
-      ws.send(JSON.stringify({
+      // Informa o cliente seus próprios dados (incluindo se é admin)
+      enviarPara(ws, {
         type: "welcome",
         name: nome,
-        color: cliente.color
-      }));
+        color: cliente.color,
+        isAdmin: cliente.isAdmin
+      });
 
-      // Avisa todo mundo que este usuário entrou
+      // Se for admin, manda também a lista de palavras já cadastradas
+      if (cliente.isAdmin) {
+        enviarPara(ws, { type: "word_list", words: palavras });
+      }
+
       broadcast({
         type: "system",
         text: `${nome} entrou no chat`,
         time: new Date().toISOString()
       });
 
-      enviarListaUsuarios(); // atualiza a lista de online para todos
+      enviarListaUsuarios();
 
-    // ── Tipo "message": usuário mandou uma mensagem de texto ──
+    // ── message: mensagem de chat normal ─────────────────────
     } else if (dados.type === "message") {
-      if (!cliente.name) return; // ignora se o usuário ainda não fez join
-
-      // Repassa a mensagem para todos, adicionando quem enviou e a hora
+      if (!cliente.name) return;
       broadcast({
         type: "message",
         from: cliente.name,
         color: cliente.color,
-        text: String(dados.text || "").slice(0, 2000), // limita a 2000 caracteres
+        text: String(dados.text || "").slice(0, 2000),
         time: new Date().toISOString()
       });
+
+    // ── add_word: admin adicionou uma palavra à lista ─────────
+    } else if (dados.type === "add_word") {
+      if (!cliente.isAdmin) return; // só admin pode fazer isso
+      const palavra = String(dados.word || "").trim().slice(0, 50);
+      if (!palavra || palavras.includes(palavra)) return; // ignora vazia ou duplicada
+      palavras.push(palavra);
+      enviarPalavrasParaAdmin(); // atualiza o painel do admin
+
+    // ── remove_word: admin removeu uma palavra ────────────────
+    } else if (dados.type === "remove_word") {
+      if (!cliente.isAdmin) return;
+      palavras = palavras.filter(p => p !== dados.word);
+      enviarPalavrasParaAdmin();
+
+    // ── start_game: admin iniciou o jogo ─────────────────────
+    } else if (dados.type === "start_game") {
+      if (!cliente.isAdmin) return;
+
+      // Precisa de pelo menos 2 jogadores e 1 palavra
+      const jogadores = [...clients.values()].filter(c => c.name);
+      if (jogadores.length < 2) {
+        enviarPara(ws, { type: "game_error", text: "Precisa de pelo menos 2 jogadores." });
+        return;
+      }
+      if (palavras.length === 0) {
+        enviarPara(ws, { type: "game_error", text: "Adicione pelo menos uma palavra." });
+        return;
+      }
+
+      jogoAtivo = true;
+
+      // Sorteia uma palavra aleatória da lista
+      const palavraEscolhida = palavras[Math.floor(Math.random() * palavras.length)];
+
+      // Sorteia um impostor aleatório entre os jogadores
+      const impostorIndex = Math.floor(Math.random() * jogadores.length);
+      const impostorNome  = jogadores[impostorIndex].name;
+
+      // Avisa no chat que o jogo começou (sem revelar nada)
+      broadcast({
+        type: "system",
+        text: "🎮 O jogo começou! Verifique sua tela.",
+        time: new Date().toISOString()
+      });
+
+      // Envia o resultado individualmente para cada jogador
+      for (const [wsJogador, dadosJogador] of clients) {
+        if (!dadosJogador.name) continue;
+
+        const ehImpostor = dadosJogador.name === impostorNome;
+
+        enviarPara(wsJogador, {
+          type: "game_start",
+          isImpostor: ehImpostor,
+          // O impostor recebe palavra null (não sabe a palavra)
+          word: ehImpostor ? null : palavraEscolhida,
+          // Só o admin sabe quem é o impostor (para referência)
+          impostorName: dadosJogador.isAdmin ? impostorNome : null
+        });
+      }
+
+    // ── end_game: admin encerrou o jogo ──────────────────────
+    } else if (dados.type === "end_game") {
+      if (!cliente.isAdmin) return;
+      jogoAtivo = false;
+      broadcast({ type: "game_end" });
     }
   });
 
-  // ── Usuário desconectou ──────────────────────────────────────
-  // Dispara quando o navegador fecha ou perde conexão
+  // ── Desconexão ───────────────────────────────────────────────
   ws.on("close", () => {
     const cliente = clients.get(ws);
-    clients.delete(ws); // remove do Map
+    clients.delete(ws);
 
-    // Se o usuário tinha nome, avisa todo mundo que ele saiu
     if (cliente && cliente.name) {
-      broadcast({
-        type: "system",
-        text: `${cliente.name} saiu do chat`,
-        time: new Date().toISOString()
-      });
-      enviarListaUsuarios(); // atualiza lista de online
+      // Se o admin saiu, o próximo usuário vira admin
+      if (cliente.isAdmin && clients.size > 0) {
+        const [proximoWs, proximoCliente] = clients.entries().next().value;
+        proximoCliente.isAdmin = true;
+        clients.set(proximoWs, proximoCliente);
+        enviarPara(proximoWs, { type: "promoted", words: palavras });
+        broadcast({ type: "system", text: `${proximoCliente.name} agora é o admin.`, time: new Date().toISOString() });
+      }
+
+      broadcast({ type: "system", text: `${cliente.name} saiu do chat`, time: new Date().toISOString() });
+      enviarListaUsuarios();
     }
   });
 });
 
 // ── Inicia o servidor ─────────────────────────────────────────
-// "0.0.0.0" significa: aceitar conexões de qualquer IP da rede
 httpServer.listen(PORT, "0.0.0.0", () => {
   const ip = getLocalIP();
   console.log(`\n✅ Ceap Chat rodando!`);
   console.log(`\n👉 Nesta máquina:   http://localhost:${PORT}`);
-  console.log(`📡 Outras na rede:  http://${ip}:${PORT}\n`);
+  console.log(`📡 Outras na rede:  http://${ip}:${PORT}`);
+  console.log(`\n👑 O primeiro a entrar vira admin e controla o jogo.\n`);
 });

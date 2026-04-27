@@ -6,22 +6,20 @@
   <title>Ceap Chat</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    /* ── Reset e variáveis globais ────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #f5f0e8;   /* fundo geral: bege quente */
-      --surface:   #fffcf5;   /* painéis e cards */
-      --border:    #e0d8c8;   /* bordas suaves */
-      --text:      #2a2118;   /* texto principal */
-      --muted:     #9c8f7e;   /* texto secundário */
-      --accent:    #c0392b;   /* vermelho institucional */
-      --accent-lt: #fdecea;   /* vermelho claro (hover, badges) */
-      --bubble-me: #2a2118;   /* bolha de quem enviou */
-      --bubble-other: #ffffff;/* bolha de quem recebeu */
-      --radius:    12px;
-      --font:      'Outfit', sans-serif;
-      --mono:      'JetBrains Mono', monospace;
+      --bg:           #f5f0e8;
+      --surface:      #fffcf5;
+      --border:       #e0d8c8;
+      --text:         #2a2118;
+      --muted:        #9c8f7e;
+      --accent:       #c0392b;
+      --bubble-me:    #2a2118;
+      --bubble-other: #ffffff;
+      --radius:       12px;
+      --font:         'Outfit', sans-serif;
+      --mono:         'JetBrains Mono', monospace;
     }
 
     body {
@@ -34,7 +32,7 @@
       overflow: hidden;
     }
 
-    /* ── Cabeçalho ────────────────────────────────────────── */
+    /* ── Cabeçalho ─────────────────────────────────────────── */
     header {
       display: flex;
       align-items: center;
@@ -43,18 +41,16 @@
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      gap: 12px;
     }
-
     .logo {
       font-size: 1.15rem;
       font-weight: 800;
       letter-spacing: -.02em;
-      color: var(--text);
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    /* Bolinha vermelha pulsando ao lado do logo */
     .logo-dot {
       width: 9px; height: 9px;
       border-radius: 50%;
@@ -62,11 +58,11 @@
       animation: pulse 2.2s ease-in-out infinite;
     }
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,.4); }
-      50%       { box-shadow: 0 0 0 7px rgba(192,57,43,0); }
+      0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,.4); }
+      50%      { box-shadow: 0 0 0 7px rgba(192,57,43,0); }
     }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
-    /* Badge de status (Conectado / Desconectado / Conectando) */
     .status-pill {
       font-family: var(--mono);
       font-size: .68rem;
@@ -80,7 +76,31 @@
     .status-pill.disconnected { background: #fee2e2; color: #991b1b; }
     .status-pill.connecting   { background: #fef3c7; color: #92400e; }
 
-    /* ── Tela de entrada (antes de fazer join) ────────────── */
+    /* Botões do cabeçalho (usuários online e painel admin) */
+    .header-btn {
+      display: none; /* aparecem após o join */
+      align-items: center;
+      gap: 7px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px 5px 8px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: all .18s;
+    }
+    .header-btn:hover { background: var(--border); }
+    .header-btn .btn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Botão do admin tem cor especial */
+    #game-btn { border-color: #c0392b44; }
+    #game-btn:hover { background: #fdecea; border-color: var(--accent); }
+    #game-btn .btn-dot { background: var(--accent); }
+
+    /* ── Tela de entrada ───────────────────────────────────── */
     #join-screen {
       flex: 1;
       display: flex;
@@ -88,7 +108,6 @@
       justify-content: center;
       padding: 24px;
     }
-
     .join-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -101,30 +120,11 @@
       gap: 22px;
       box-shadow: 0 4px 40px rgba(0,0,0,.07);
     }
-
-    .join-card h2 {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -.04em;
-    }
+    .join-card h2 { font-size: 2rem; font-weight: 800; line-height: 1.1; letter-spacing: -.04em; }
     .join-card h2 span { color: var(--accent); }
-
-    .join-card p {
-      font-size: .85rem;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* Campo de texto + label */
+    .join-card p { font-size: .85rem; color: var(--muted); line-height: 1.6; }
     .field { display: flex; flex-direction: column; gap: 6px; }
-    .field label {
-      font-size: .72rem;
-      font-weight: 700;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
+    .field label { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
     .field input {
       background: var(--bg);
       border: 1.5px solid var(--border);
@@ -137,8 +137,6 @@
       transition: border-color .2s;
     }
     .field input:focus { border-color: var(--accent); }
-
-    /* Botão principal */
     .btn-primary {
       padding: 13px 20px;
       border-radius: var(--radius);
@@ -155,133 +153,12 @@
     .btn-primary:active  { transform: translateY(0); }
     .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
-    /* ── Botão de toggle da lista de usuários ────────────── */
-    /* Fica no cabeçalho, abre/fecha o drawer */
-    #users-toggle {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px 5px 8px;
-      cursor: pointer;
-      font-family: var(--font);
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--text);
-      transition: all .18s;
-      /* Escondido até o usuário entrar no chat */
-      display: none;
-    }
-    #users-toggle:hover { background: var(--border); }
-    /* Bolinha verde que mostra quantos estão online */
-    #users-toggle .toggle-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-      flex-shrink: 0;
-    }
-
-    /* ── Overlay escuro por trás do drawer ───────────────── */
-    /* Aparece quando o drawer abre; clicar nele fecha o drawer */
-    #drawer-overlay {
-      display: none;              /* começa invisível */
-      position: fixed;
-      inset: 0;                   /* cobre a tela toda */
-      background: rgba(0,0,0,.3);
-      z-index: 10;
-      animation: fadeIn .2s ease;
-    }
-    #drawer-overlay.show { display: block; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    /* ── Drawer (painel deslizante) ──────────────────────── */
-    /* Fica fixo na tela, do lado direito */
-    #users-drawer {
-      position: fixed;
-      top: 0; right: 0; bottom: 0;  /* ocupa toda a altura */
-      width: 220px;
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      box-shadow: -4px 0 24px rgba(0,0,0,.1);
-      z-index: 11;                   /* fica acima do overlay */
-      display: flex;
-      flex-direction: column;
-      padding: 20px 14px;
-      gap: 4px;
-
-      /* Começa fora da tela (escondido à direita) */
-      transform: translateX(100%);
-      /* Animação suave de abertura e fechamento */
-      transition: transform .28s cubic-bezier(.4,0,.2,1);
-    }
-    /* Quando a classe "open" é adicionada, o drawer entra na tela */
-    #users-drawer.open { transform: translateX(0); }
-
-    /* Cabeçalho do drawer com título e botão de fechar */
-    .drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 8px;
-    }
-    .drawer-title {
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    /* Botão × para fechar o drawer */
-    .drawer-close {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 1rem;
-      line-height: 1;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: all .15s;
-    }
-    .drawer-close:hover { background: var(--bg); color: var(--text); }
-
-    /* Cada linha de usuário dentro do drawer */
-    .user-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 8px;
-      border-radius: 8px;
-      font-size: .83rem;
-      transition: background .15s;
-    }
-    .user-item:hover { background: var(--bg); }
-    .user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .user-name.me { font-weight: 700; }
-
-    /* ── Layout do chat ───────────────────────────────────── */
-    #chat-screen {
-      flex: 1;
-      display: none;   /* começa escondido; aparece após o join */
-      overflow: hidden;
-    }
+    /* ── Layout do chat ────────────────────────────────────── */
+    #chat-screen { flex: 1; display: none; overflow: hidden; }
     #chat-screen.active { display: flex; }
+    .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
-    /* Área principal do chat (ocupa tudo agora, sem sidebar) */
-    .chat-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-width: 0;
-    }
-
-    /* ── Lista de mensagens ───────────────────────────────── */
+    /* ── Mensagens ─────────────────────────────────────────── */
     #messages {
       flex: 1;
       overflow-y: auto;
@@ -291,12 +168,10 @@
       gap: 6px;
       scroll-behavior: smooth;
     }
-    /* Estilo da barra de rolagem */
     #messages::-webkit-scrollbar { width: 4px; }
     #messages::-webkit-scrollbar-track { background: transparent; }
     #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    /* ── Mensagem do sistema (ex: "João entrou") ─────────── */
     .system-msg {
       text-align: center;
       font-size: .72rem;
@@ -307,48 +182,18 @@
       align-items: center;
       gap: 10px;
     }
-    /* Linhas decorativas dos dois lados */
-    .system-msg::before, .system-msg::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
-    }
+    .system-msg::before, .system-msg::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* ── Bloco de mensagem normal ─────────────────────────── */
-    .msg {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      max-width: 68%;
-    }
-    /* Mensagem enviada por mim: fica do lado direito */
-    .msg.mine { align-self: flex-end; align-items: flex-end; }
-    /* Mensagem de outro usuário: fica do lado esquerdo */
+    .msg { display: flex; flex-direction: column; gap: 3px; max-width: 68%; }
+    .msg.mine  { align-self: flex-end;  align-items: flex-end; }
     .msg.other { align-self: flex-start; align-items: flex-start; }
-
-    /* Linha com nome + hora */
-    .msg-meta {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      font-size: .72rem;
-      color: var(--muted);
-      font-family: var(--mono);
-    }
+    .msg-meta { display: flex; align-items: baseline; gap: 6px; font-size: .72rem; color: var(--muted); font-family: var(--mono); }
     .msg-name { font-weight: 600; font-size: .78rem; }
-
-    /* Bolha de texto */
-    .msg-bubble {
-      padding: 9px 14px;
-      border-radius: 16px;
-      font-size: .9rem;
-      line-height: 1.55;
-      word-break: break-word;
-    }
-    /* Bolha de quem enviou (eu): escura */
-    .msg.mine  .msg-bubble { background: var(--bubble-me); color: #fff; border-radius: 16px 4px 16px 16px; }
-    /* Bolha de outro usuário: branca */
+    .msg-bubble { padding: 9px 14px; border-radius: 16px; font-size: .9rem; line-height: 1.55; word-break: break-word; }
+    .msg.mine  .msg-bubble { background: var(--bubble-me);    color: #fff;        border-radius: 16px 4px 16px 16px; }
     .msg.other .msg-bubble { background: var(--bubble-other); color: var(--text); border-radius: 4px 16px 16px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
 
-    /* ── Área de digitação ────────────────────────────────── */
+    /* ── Campo de digitação ────────────────────────────────── */
     .input-area {
       display: flex;
       align-items: flex-end;
@@ -357,8 +202,6 @@
       background: var(--surface);
       border-top: 1px solid var(--border);
     }
-
-    /* Campo de texto que cresce conforme o conteúdo */
     #msg-input {
       flex: 1;
       background: var(--bg);
@@ -378,8 +221,6 @@
     }
     #msg-input:focus { border-color: var(--accent); }
     #msg-input::placeholder { color: var(--muted); }
-
-    /* Botão de enviar */
     #send-btn {
       padding: 10px 18px;
       background: var(--accent);
@@ -391,50 +232,322 @@
       flex-shrink: 0;
       transition: all .18s;
     }
-    #send-btn:hover   { background: #a93226; }
-    #send-btn:disabled { opacity: .4; cursor: not-allowed; }
+    #send-btn:hover { background: #a93226; }
+
+    /* ── Overlay genérico (fundo escuro) ───────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 10;
+      animation: fadeIn .2s ease;
+    }
+    .overlay.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Drawer de usuários ────────────────────────────────── */
+    #users-drawer {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 220px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 24px rgba(0,0,0,.1);
+      z-index: 11;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      gap: 4px;
+      transform: translateX(100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    #users-drawer.open { transform: translateX(0); }
+    .drawer-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .drawer-title { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .drawer-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; padding: 2px 4px; border-radius: 4px; transition: all .15s; }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+    .user-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: .83rem; transition: background .15s; }
+    .user-item:hover { background: var(--bg); }
+    .user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-name.me { font-weight: 700; }
+    /* Badge de admin ao lado do nome */
+    .admin-badge { font-size: .6rem; font-weight: 700; background: #fdecea; color: var(--accent); border-radius: 4px; padding: 1px 5px; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Painel do admin (drawer esquerdo) ─────────────────── */
+    #game-drawer {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 280px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,.1);
+      z-index: 11;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      gap: 16px;
+      transform: translateX(-100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+      overflow-y: auto;
+    }
+    #game-drawer.open { transform: translateX(0); }
+
+    .game-drawer-header { display: flex; align-items: center; justify-content: space-between; }
+    .game-drawer-title { font-size: 1rem; font-weight: 800; letter-spacing: -.02em; }
+    .game-drawer-title span { color: var(--accent); }
+
+    /* Campo de adicionar palavra */
+    .word-input-row { display: flex; gap: 8px; }
+    .word-input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: .88rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .word-input-row input:focus { border-color: var(--accent); }
+    .word-input-row button {
+      padding: 9px 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s;
+      white-space: nowrap;
+    }
+    .word-input-row button:hover { background: #a93226; }
+
+    /* Lista de palavras cadastradas */
+    .section-label { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    #word-list-admin { display: flex; flex-direction: column; gap: 6px; }
+    .word-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: .85rem;
+    }
+    .word-tag-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .9rem;
+      padding: 0 2px;
+      border-radius: 4px;
+      transition: color .15s;
+    }
+    .word-tag-remove:hover { color: var(--accent); }
+
+    /* Separador */
+    .divider { height: 1px; background: var(--border); }
+
+    /* Botão de iniciar jogo */
+    #start-game-btn {
+      padding: 13px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-family: var(--font);
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s;
+      text-align: center;
+    }
+    #start-game-btn:hover { background: #a93226; transform: translateY(-1px); }
+
+    /* Botão de encerrar jogo (aparece quando o jogo está ativo) */
+    #end-game-btn {
+      display: none;
+      padding: 10px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+      text-align: center;
+    }
+    #end-game-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Mensagem de erro do jogo */
+    #game-error {
+      font-size: .8rem;
+      color: var(--accent);
+      font-family: var(--mono);
+      display: none;
+      padding: 8px 10px;
+      background: #fdecea;
+      border-radius: 8px;
+    }
+    #game-error.show { display: block; }
+
+    /* ── Tela de revelação do jogo ─────────────────────────── */
+    /* Aparece para todos quando o jogo começa, mostrando a palavra ou "impostor" */
+    #reveal-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      /* Fundo muda conforme o papel */
+      background: #0d0d0d;
+      animation: fadeIn .3s ease;
+    }
+    #reveal-screen.show { display: flex; }
+
+    .reveal-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .reveal-role {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      opacity: .6;
+    }
+    .reveal-word {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1;
+    }
+    .reveal-hint {
+      font-size: .9rem;
+      opacity: .6;
+      line-height: 1.5;
+      max-width: 280px;
+    }
+    /* Variante para jogador normal: fundo escuro, texto claro */
+    .reveal-card.player { color: #fff; }
+    .reveal-card.player .reveal-word { color: #fbbf24; } /* amarelo para destaque */
+
+    /* Variante para impostor: fundo vermelho escuro */
+    #reveal-screen.impostor { background: #1a0000; }
+    .reveal-card.impostor { color: #fff; }
+    .reveal-card.impostor .reveal-word { color: #f87171; }
+
+    /* Variante para admin (vê tudo) */
+    #reveal-screen.admin-view { background: #001a0a; }
+    .reveal-card.admin-view { color: #fff; }
+    .reveal-card.admin-view .reveal-word { color: #6ee7b7; }
+
+    .reveal-close {
+      margin-top: 8px;
+      padding: 11px 28px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px solid rgba(255,255,255,.25);
+      border-radius: 20px;
+      color: #fff;
+      font-family: var(--font);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s;
+    }
+    .reveal-close:hover { background: rgba(255,255,255,.25); }
   </style>
 </head>
 <body>
 
-<!-- ── Cabeçalho fixo ──────────────────────────────────────── -->
+<!-- ── Cabeçalho ───────────────────────────────────────────── -->
 <header>
   <div class="logo">
     <span class="logo-dot"></span>
     Ceap Chat
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <!-- O status muda conforme a conexão WebSocket -->
+  <div class="header-right">
     <span id="status-pill" class="status-pill disconnected">Desconectado</span>
-    <!-- Botão que abre/fecha o drawer; só aparece após o join -->
-    <button id="users-toggle">
-      <span class="toggle-dot"></span>
+
+    <!-- Botão do painel de jogo (só para o admin) -->
+    <button class="header-btn" id="game-btn">
+      <span class="btn-dot" style="background:var(--accent)"></span>
+      <span>Jogo</span>
+    </button>
+
+    <!-- Botão de usuários online -->
+    <button class="header-btn" id="users-toggle">
+      <span class="btn-dot" style="background:#22c55e"></span>
       <span id="users-count">0 online</span>
     </button>
   </div>
 </header>
 
-<!-- ── Overlay: fundo escuro ao abrir o drawer ─────────────── -->
-<!-- Clicar nele fecha o drawer -->
-<div id="drawer-overlay"></div>
+<!-- ── Overlay (fundo escuro dos drawers) ──────────────────── -->
+<div class="overlay" id="overlay"></div>
 
-<!-- ── Drawer: painel deslizante de usuários online ─────────── -->
+<!-- ── Drawer de usuários (direita) ────────────────────────── -->
 <div id="users-drawer">
   <div class="drawer-header">
     <span class="drawer-title">Online agora</span>
-    <!-- Botão × para fechar -->
-    <button class="drawer-close" id="drawer-close">✕</button>
+    <button class="drawer-close" id="users-close">✕</button>
   </div>
-  <!-- Lista de usuários preenchida pelo JS -->
   <div id="user-list"></div>
 </div>
 
-<!-- ── Tela de entrada ─────────────────────────────────────── -->
-<!-- Visível antes do usuário entrar no chat -->
+<!-- ── Drawer do admin / painel de jogo (esquerda) ─────────── -->
+<div id="game-drawer">
+  <div class="game-drawer-header">
+    <span class="game-drawer-title">Painel do <span>Jogo</span></span>
+    <button class="drawer-close" id="game-close">✕</button>
+  </div>
+
+  <!-- Campo para adicionar palavras -->
+  <span class="section-label">Adicionar palavra</span>
+  <div class="word-input-row">
+    <input id="word-input" type="text" placeholder="Ex: Futebol" maxlength="50" autocomplete="off" />
+    <button id="add-word-btn">+ Add</button>
+  </div>
+
+  <!-- Lista de palavras cadastradas -->
+  <span class="section-label">Palavras na lista</span>
+  <div id="word-list-admin">
+    <span style="font-size:.8rem;color:var(--muted);font-family:var(--mono)">Nenhuma palavra ainda.</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Erros do jogo -->
+  <div id="game-error"></div>
+
+  <!-- Botão de iniciar -->
+  <button id="start-game-btn">🎮 Iniciar jogo</button>
+
+  <!-- Botão de encerrar (aparece durante o jogo) -->
+  <button id="end-game-btn">Encerrar jogo</button>
+</div>
+
+<!-- ── Tela de entrada ──────────────────────────────────────── -->
 <div id="join-screen">
   <div class="join-card">
     <h2>Bem-vindo ao<br/><span>Ceap Chat</span></h2>
-    <p>Chat em tempo real entre máquinas na mesma rede. Escolha um nome para entrar.</p>
+    <p>Chat em tempo real entre alunos. Escolha um nome para entrar.</p>
     <div class="field">
       <label>Seu nome</label>
       <input id="name-input" type="text" placeholder="Ex: João" maxlength="20" autocomplete="off" />
@@ -444,25 +557,29 @@
 </div>
 
 <!-- ── Tela de chat ─────────────────────────────────────────── -->
-<!-- Fica oculta até o join ser feito -->
 <div id="chat-screen">
-
-  <!-- Área principal (ocupa a tela toda agora) -->
   <div class="chat-main">
-    <!-- Onde as mensagens aparecem -->
     <div id="messages"></div>
-
-    <!-- Campo para digitar e enviar -->
     <div class="input-area">
       <textarea id="msg-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
       <button id="send-btn">➤</button>
     </div>
   </div>
+</div>
 
+<!-- ── Tela de revelação do jogo ────────────────────────────── -->
+<!-- Aparece em tela cheia quando o admin inicia o jogo -->
+<div id="reveal-screen">
+  <div class="reveal-card" id="reveal-card">
+    <span class="reveal-role" id="reveal-role"></span>
+    <span class="reveal-word" id="reveal-word"></span>
+    <span class="reveal-hint" id="reveal-hint"></span>
+    <button class="reveal-close" id="reveal-close">Entendi →</button>
+  </div>
 </div>
 
 <script>
-  // ── Referências aos elementos do HTML ─────────────────────
+  // ── Referências ────────────────────────────────────────────
   const joinScreen    = document.getElementById("join-screen");
   const chatScreen    = document.getElementById("chat-screen");
   const nameInput     = document.getElementById("name-input");
@@ -472,131 +589,242 @@
   const msgInput      = document.getElementById("msg-input");
   const sendBtn       = document.getElementById("send-btn");
   const userListEl    = document.getElementById("user-list");
-  const usersToggle   = document.getElementById("users-toggle");
   const usersCount    = document.getElementById("users-count");
+  const overlay       = document.getElementById("overlay");
   const usersDrawer   = document.getElementById("users-drawer");
-  const drawerOverlay = document.getElementById("drawer-overlay");
-  const drawerClose   = document.getElementById("drawer-close");
+  const usersToggle   = document.getElementById("users-toggle");
+  const usersClose    = document.getElementById("users-close");
+  const gameDrawer    = document.getElementById("game-drawer");
+  const gameBtn       = document.getElementById("game-btn");
+  const gameClose     = document.getElementById("game-close");
+  const wordInput     = document.getElementById("word-input");
+  const addWordBtn    = document.getElementById("add-word-btn");
+  const wordListAdmin = document.getElementById("word-list-admin");
+  const startGameBtn  = document.getElementById("start-game-btn");
+  const endGameBtn    = document.getElementById("end-game-btn");
+  const gameError     = document.getElementById("game-error");
+  const revealScreen  = document.getElementById("reveal-screen");
+  const revealCard    = document.getElementById("reveal-card");
+  const revealRole    = document.getElementById("reveal-role");
+  const revealWord    = document.getElementById("reveal-word");
+  const revealHint    = document.getElementById("reveal-hint");
+  const revealClose   = document.getElementById("reveal-close");
 
-  // ── Estado local ──────────────────────────────────────────
-  let ws     = null; // objeto da conexão WebSocket
-  let myName = "";   // nome do usuário nesta aba
+  // ── Estado local ───────────────────────────────────────────
+  let ws      = null;
+  let myName  = "";
+  let isAdmin = false;
 
-  // ── Lógica do drawer (painel de usuários) ─────────────────
-
-  // Abre o drawer + mostra o overlay
-  function abrirDrawer() {
-    usersDrawer.classList.add("open");
-    drawerOverlay.classList.add("show");
-  }
-
-  // Fecha o drawer + esconde o overlay
-  function fecharDrawer() {
-    usersDrawer.classList.remove("open");
-    drawerOverlay.classList.remove("show");
-  }
-
-  // Botão no cabeçalho abre o drawer
-  usersToggle.addEventListener("click", abrirDrawer);
-
-  // Botão × dentro do drawer fecha
-  drawerClose.addEventListener("click", fecharDrawer);
-
-  // Clicar no overlay escuro também fecha
-  drawerOverlay.addEventListener("click", fecharDrawer);
-
-  // ── Atualiza o badge de status no cabeçalho ───────────────
+  // ── Status ─────────────────────────────────────────────────
   function setStatus(estado) {
-    const textos = {
-      connected:    "Conectado",
-      disconnected: "Desconectado",
-      connecting:   "Conectando..."
-    };
+    const textos = { connected: "Conectado", disconnected: "Desconectado", connecting: "Conectando..." };
     statusPill.className = "status-pill " + estado;
     statusPill.textContent = textos[estado];
   }
 
-  // ── Entrar no chat ────────────────────────────────────────
-  // Chamada quando o usuário clica em "Entrar" ou pressiona Enter
+  // ── Drawers ─────────────────────────────────────────────────
+  // Controla qual drawer está aberto (só um por vez)
+  function abrirDrawer(drawer) {
+    fecharTodosDrawers();
+    drawer.classList.add("open");
+    overlay.classList.add("show");
+  }
+  function fecharTodosDrawers() {
+    usersDrawer.classList.remove("open");
+    gameDrawer.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+
+  usersToggle.addEventListener("click", () => abrirDrawer(usersDrawer));
+  usersClose.addEventListener("click",  fecharTodosDrawers);
+  gameBtn.addEventListener("click",     () => abrirDrawer(gameDrawer));
+  gameClose.addEventListener("click",   fecharTodosDrawers);
+  overlay.addEventListener("click",     fecharTodosDrawers);
+
+  // ── Join ───────────────────────────────────────────────────
   function entrar() {
     const nome = nameInput.value.trim();
     if (!nome) { nameInput.focus(); return; }
     myName = nome;
     conectar();
   }
-
   joinBtn.addEventListener("click", entrar);
   nameInput.addEventListener("keydown", e => { if (e.key === "Enter") entrar(); });
 
-  // ── Abrir conexão WebSocket ───────────────────────────────
-  // Conecta ao servidor rodando na mesma máquina (ou IP da rede)
+  // ── WebSocket ──────────────────────────────────────────────
   function conectar() {
     joinBtn.disabled = true;
     setStatus("connecting");
-
-    // O protocolo muda conforme o site usa HTTP ou HTTPS
     const proto = location.protocol === "https:" ? "wss" : "ws";
     ws = new WebSocket(`${proto}://${location.host}`);
 
-    // Quando a conexão abre, manda o nome do usuário para o servidor
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "join", name: myName }));
     };
-
-    // Quando o servidor manda qualquer mensagem
-    ws.onmessage = (e) => {
-      const dados = JSON.parse(e.data);
-      tratarMensagem(dados);
-    };
-
-    // Quando a conexão cai (servidor parou, rede caiu, etc.)
-    ws.onclose = () => {
-      setStatus("disconnected");
-      joinBtn.disabled = false;
-    };
-
-    ws.onerror = () => {
-      setStatus("disconnected");
-      joinBtn.disabled = false;
-    };
+    ws.onmessage = (e) => tratarMensagem(JSON.parse(e.data));
+    ws.onclose   = () => { setStatus("disconnected"); joinBtn.disabled = false; };
+    ws.onerror   = () => { setStatus("disconnected"); joinBtn.disabled = false; };
   }
 
-  // ── Processar mensagens recebidas do servidor ─────────────
-  // Cada mensagem tem um "type" que diz o que fazer com ela
+  // ── Processar mensagens do servidor ────────────────────────
   function tratarMensagem(dados) {
 
-    // Servidor confirmou a entrada: mostra a tela de chat
+    // Confirmação de entrada: mostra o chat
     if (dados.type === "welcome") {
+      isAdmin = dados.isAdmin;
       joinScreen.style.display = "none";
       chatScreen.classList.add("active");
       setStatus("connected");
-      // Mostra o botão de toggle de usuários no cabeçalho
-      usersToggle.style.display = "flex";
 
-    // Mensagem de sistema: ex "João entrou no chat"
+      // Mostra botões do cabeçalho
+      document.querySelectorAll(".header-btn").forEach(b => b.style.display = "flex");
+
+      // Botão de jogo só aparece para o admin
+      if (!isAdmin) gameBtn.style.display = "none";
+
+    // Admin recebeu/atualizou a lista de palavras
+    } else if (dados.type === "word_list") {
+      renderizarPalavras(dados.words);
+
+    // Mensagem de sistema (entrou, saiu, jogo começou)
     } else if (dados.type === "system") {
       adicionarSistema(dados.text);
 
-    // Mensagem de texto de um usuário
+    // Mensagem de chat
     } else if (dados.type === "message") {
       adicionarMensagem(dados);
 
-    // Lista atualizada de quem está online
+    // Lista de usuários online atualizada
     } else if (dados.type === "user_list") {
       renderizarUsuarios(dados.users);
+
+    // Jogo iniciou: mostra a tela de revelação
+    } else if (dados.type === "game_start") {
+      mostrarRevelacao(dados);
+
+    // Jogo encerrado: esconde a revelação (se ainda estiver aberta)
+    } else if (dados.type === "game_end") {
+      revealScreen.classList.remove("show");
+      // Reseta botões do admin
+      startGameBtn.style.display = "block";
+      endGameBtn.style.display = "none";
+
+    // Erro do jogo (ex: poucos jogadores)
+    } else if (dados.type === "game_error") {
+      gameError.textContent = dados.text;
+      gameError.classList.add("show");
+      setTimeout(() => gameError.classList.remove("show"), 3000);
+
+    // Admin foi promovido (o admin anterior saiu)
+    } else if (dados.type === "promoted") {
+      isAdmin = true;
+      gameBtn.style.display = "flex";
+      renderizarPalavras(dados.words);
     }
   }
 
-  // ── Formatar hora ─────────────────────────────────────────
-  // Converte ISO string ("2024-01-01T12:30:00.000Z") para "12:30"
-  function formatarHora(iso) {
-    return new Date(iso).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit"
+  // ── Tela de revelação do jogo ──────────────────────────────
+  // Cada jogador vê uma tela diferente:
+  // - Jogador normal: vê a palavra
+  // - Impostor: vê que é o impostor, sem a palavra
+  // - Admin: vê a palavra E quem é o impostor
+  function mostrarRevelacao(dados) {
+    fecharTodosDrawers();
+
+    if (dados.isImpostor) {
+      // Sou o impostor
+      revealScreen.className = "show impostor";
+      revealCard.className   = "reveal-card impostor";
+      revealRole.textContent = "👤 Seu papel";
+      revealWord.textContent = "IMPOSTOR";
+      revealHint.textContent = "Você não sabe a palavra. Tente convencer os outros de que sabe!";
+
+    } else if (isAdmin && dados.impostorName) {
+      // Sou o admin: vejo a palavra e o impostor
+      revealScreen.className = "show admin-view";
+      revealCard.className   = "reveal-card admin-view";
+      revealRole.textContent = "👑 Visão do admin";
+      revealWord.textContent = dados.word;
+      revealHint.textContent = `Impostor: ${dados.impostorName}`;
+
+    } else {
+      // Jogador normal: vejo só a palavra
+      revealScreen.className = "show";
+      revealCard.className   = "reveal-card player";
+      revealRole.textContent = "🟡 A palavra é";
+      revealWord.textContent = dados.word;
+      revealHint.textContent = "Lembre-se! Não diga a palavra diretamente — um impostor está entre vocês.";
+    }
+
+    revealScreen.classList.add("show");
+
+    // Botões do admin mudam após iniciar o jogo
+    if (isAdmin) {
+      startGameBtn.style.display = "none";
+      endGameBtn.style.display   = "block";
+    }
+  }
+
+  // Botão "Entendi" fecha a tela de revelação
+  revealClose.addEventListener("click", () => {
+    revealScreen.classList.remove("show");
+  });
+
+  // ── Painel do admin: gerenciar palavras ────────────────────
+
+  // Adiciona uma palavra à lista
+  function adicionarPalavra() {
+    const palavra = wordInput.value.trim();
+    if (!palavra) return;
+    ws.send(JSON.stringify({ type: "add_word", word: palavra }));
+    wordInput.value = "";
+  }
+  addWordBtn.addEventListener("click", adicionarPalavra);
+  wordInput.addEventListener("keydown", e => { if (e.key === "Enter") adicionarPalavra(); });
+
+  // Renderiza a lista de palavras no painel do admin
+  function renderizarPalavras(palavras) {
+    if (palavras.length === 0) {
+      wordListAdmin.innerHTML = `<span style="font-size:.8rem;color:var(--muted);font-family:var(--mono)">Nenhuma palavra ainda.</span>`;
+      return;
+    }
+    wordListAdmin.innerHTML = "";
+    palavras.forEach(p => {
+      const tag = document.createElement("div");
+      tag.className = "word-tag";
+
+      const texto = document.createElement("span");
+      texto.textContent = p;
+
+      // Botão × para remover a palavra
+      const remover = document.createElement("button");
+      remover.className = "word-tag-remove";
+      remover.textContent = "✕";
+      remover.addEventListener("click", () => {
+        ws.send(JSON.stringify({ type: "remove_word", word: p }));
+      });
+
+      tag.appendChild(texto);
+      tag.appendChild(remover);
+      wordListAdmin.appendChild(tag);
     });
   }
 
-  // ── Adicionar mensagem de sistema na lista ────────────────
+  // Inicia o jogo
+  startGameBtn.addEventListener("click", () => {
+    ws.send(JSON.stringify({ type: "start_game" }));
+  });
+
+  // Encerra o jogo
+  endGameBtn.addEventListener("click", () => {
+    ws.send(JSON.stringify({ type: "end_game" }));
+  });
+
+  // ── Chat ───────────────────────────────────────────────────
+  function formatarHora(iso) {
+    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
   function adicionarSistema(texto) {
     const el = document.createElement("div");
     el.className = "system-msg";
@@ -605,96 +833,61 @@
     rolarParaBaixo();
   }
 
-  // ── Adicionar mensagem de chat na lista ───────────────────
   function adicionarMensagem(dados) {
-    // Verifica se a mensagem foi enviada por mim
     const minha = dados.from === myName;
-
-    // Cria o bloco da mensagem
     const bloco = document.createElement("div");
     bloco.className = "msg " + (minha ? "mine" : "other");
 
-    // Linha com nome e hora
-    const meta = document.createElement("div");
-    meta.className = "msg-meta";
-
-    const nome = document.createElement("span");
-    nome.className = "msg-name";
-    nome.style.color = dados.color; // cor única deste usuário
+    const meta  = document.createElement("div"); meta.className = "msg-meta";
+    const nome  = document.createElement("span"); nome.className = "msg-name";
+    nome.style.color = dados.color;
     nome.textContent = minha ? "Você" : dados.from;
+    const hora  = document.createElement("span"); hora.textContent = formatarHora(dados.time);
+    meta.appendChild(nome); meta.appendChild(hora);
 
-    const hora = document.createElement("span");
-    hora.textContent = formatarHora(dados.time);
+    const bolha = document.createElement("div"); bolha.className = "msg-bubble";
+    bolha.textContent = dados.text;
 
-    meta.appendChild(nome);
-    meta.appendChild(hora);
-
-    // Bolha com o texto
-    const bolha = document.createElement("div");
-    bolha.className = "msg-bubble";
-    bolha.textContent = dados.text; // textContent é seguro (não executa HTML)
-
-    bloco.appendChild(meta);
-    bloco.appendChild(bolha);
+    bloco.appendChild(meta); bloco.appendChild(bolha);
     messagesEl.appendChild(bloco);
     rolarParaBaixo();
   }
 
-  // ── Atualizar lista de usuários no drawer ────────────────
   function renderizarUsuarios(usuarios) {
-    userListEl.innerHTML = ""; // limpa a lista atual
-
-    // Atualiza o número no botão do cabeçalho
+    userListEl.innerHTML = "";
     usersCount.textContent = `${usuarios.length} online`;
-
     usuarios.forEach(u => {
-      const item = document.createElement("div");
-      item.className = "user-item";
-
-      // Bolinha colorida
-      const dot = document.createElement("span");
-      dot.className = "user-dot";
-      dot.style.background = u.color;
-
-      // Nome
+      const item = document.createElement("div"); item.className = "user-item";
+      const dot  = document.createElement("span"); dot.className = "user-dot"; dot.style.background = u.color;
       const nome = document.createElement("span");
       nome.className = "user-name" + (u.name === myName ? " me" : "");
       nome.textContent = u.name === myName ? u.name + " (você)" : u.name;
-
-      item.appendChild(dot);
-      item.appendChild(nome);
+      item.appendChild(dot); item.appendChild(nome);
+      // Mostra badge de admin ao lado do nome
+      if (u.isAdmin) {
+        const badge = document.createElement("span");
+        badge.className = "admin-badge";
+        badge.textContent = "admin";
+        item.appendChild(badge);
+      }
       userListEl.appendChild(item);
     });
   }
 
-  // ── Rolar para a última mensagem ──────────────────────────
-  function rolarParaBaixo() {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
+  function rolarParaBaixo() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
-  // ── Enviar mensagem ───────────────────────────────────────
   function enviarMensagem() {
     const texto = msgInput.value.trim();
     if (!texto || !ws || ws.readyState !== 1) return;
-
-    // Manda para o servidor, que vai redistribuir para todos
     ws.send(JSON.stringify({ type: "message", text: texto }));
-
     msgInput.value = "";
-    msgInput.style.height = "auto"; // reseta altura do campo
+    msgInput.style.height = "auto";
   }
 
   sendBtn.addEventListener("click", enviarMensagem);
-
-  // Enter envia; Shift+Enter quebra linha
   msgInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      enviarMensagem();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarMensagem(); }
   });
-
-  // Faz o campo de texto crescer conforme o usuário digita
   msgInput.addEventListener("input", () => {
     msgInput.style.height = "auto";
     msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + "px";
