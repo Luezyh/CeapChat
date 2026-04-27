@@ -656,7 +656,7 @@
     joinBtn.disabled = true;
     setStatus("connecting");
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}`);
+    ws = new WebSocket(`74.220.48.0/24`);
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "join", name: myName }));
