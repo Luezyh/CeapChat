@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ceap Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset e variáveis globais ────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f5f0e8;   /* fundo geral: bege quente */
+      --surface:   #fffcf5;   /* painéis e cards */
+      --border:    #e0d8c8;   /* bordas suaves */
+      --text:      #2a2118;   /* texto principal */
+      --muted:     #9c8f7e;   /* texto secundário */
+      --accent:    #c0392b;   /* vermelho institucional */
+      --accent-lt: #fdecea;   /* vermelho claro (hover, badges) */
+      --bubble-me: #2a2118;   /* bolha de quem enviou */
+      --bubble-other: #ffffff;/* bolha de quem recebeu */
+      --radius:    12px;
+      --font:      'Outfit', sans-serif;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Cabeçalho ────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    /* Bolinha vermelha pulsando ao lado do logo */
+    .logo-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,.4); }
+      50%       { box-shadow: 0 0 0 7px rgba(192,57,43,0); }
+    }
+
+    /* Badge de status (Conectado / Desconectado / Conectando) */
+    .status-pill {
+      font-family: var(--mono);
+      font-size: .68rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .status-pill.connected    { background: #d1fae5; color: #065f46; }
+    .status-pill.disconnected { background: #fee2e2; color: #991b1b; }
+    .status-pill.connecting   { background: #fef3c7; color: #92400e; }
+
+    /* ── Tela de entrada (antes de fazer join) ────────────── */
+    #join-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .join-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      box-shadow: 0 4px 40px rgba(0,0,0,.07);
+    }
+
+    .join-card h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -.04em;
+    }
+    .join-card h2 span { color: var(--accent); }
+
+    .join-card p {
+      font-size: .85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Campo de texto + label */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .field input {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: .95rem;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+
+    /* Botão principal */
+    .btn-primary {
+      padding: 13px 20px;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: .95rem;
+      cursor: pointer;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      transition: all .18s;
+    }
+    .btn-primary:hover   { background: #a93226; transform: translateY(-1px); }
+    .btn-primary:active  { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── Botão de toggle da lista de usuários ────────────── */
+    /* Fica no cabeçalho, abre/fecha o drawer */
+    #users-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px 5px 8px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: all .18s;
+      /* Escondido até o usuário entrar no chat */
+      display: none;
+    }
+    #users-toggle:hover { background: var(--border); }
+    /* Bolinha verde que mostra quantos estão online */
+    #users-toggle .toggle-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+    }
+
+    /* ── Overlay escuro por trás do drawer ───────────────── */
+    /* Aparece quando o drawer abre; clicar nele fecha o drawer */
+    #drawer-overlay {
+      display: none;              /* começa invisível */
+      position: fixed;
+      inset: 0;                   /* cobre a tela toda */
+      background: rgba(0,0,0,.3);
+      z-index: 10;
+      animation: fadeIn .2s ease;
+    }
+    #drawer-overlay.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── Drawer (painel deslizante) ──────────────────────── */
+    /* Fica fixo na tela, do lado direito */
+    #users-drawer {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;  /* ocupa toda a altura */
+      width: 220px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 24px rgba(0,0,0,.1);
+      z-index: 11;                   /* fica acima do overlay */
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      gap: 4px;
+
+      /* Começa fora da tela (escondido à direita) */
+      transform: translateX(100%);
+      /* Animação suave de abertura e fechamento */
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    /* Quando a classe "open" é adicionada, o drawer entra na tela */
+    #users-drawer.open { transform: translateX(0); }
+
+    /* Cabeçalho do drawer com título e botão de fechar */
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .drawer-title {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    /* Botão × para fechar o drawer */
+    .drawer-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: all .15s;
+    }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+
+    /* Cada linha de usuário dentro do drawer */
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      font-size: .83rem;
+      transition: background .15s;
+    }
+    .user-item:hover { background: var(--bg); }
+    .user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-name.me { font-weight: 700; }
+
+    /* ── Layout do chat ───────────────────────────────────── */
+    #chat-screen {
+      flex: 1;
+      display: none;   /* começa escondido; aparece após o join */
+      overflow: hidden;
+    }
+    #chat-screen.active { display: flex; }
+
+    /* Área principal do chat (ocupa tudo agora, sem sidebar) */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ── Lista de mensagens ───────────────────────────────── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+    /* Estilo da barra de rolagem */
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Mensagem do sistema (ex: "João entrou") ─────────── */
+    .system-msg {
+      text-align: center;
+      font-size: .72rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      padding: 4px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    /* Linhas decorativas dos dois lados */
+    .system-msg::before, .system-msg::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── Bloco de mensagem normal ─────────────────────────── */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-width: 68%;
+    }
+    /* Mensagem enviada por mim: fica do lado direito */
+    .msg.mine { align-self: flex-end; align-items: flex-end; }
+    /* Mensagem de outro usuário: fica do lado esquerdo */
+    .msg.other { align-self: flex-start; align-items: flex-start; }
+
+    /* Linha com nome + hora */
+    .msg-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-size: .72rem;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .msg-name { font-weight: 600; font-size: .78rem; }
+
+    /* Bolha de texto */
+    .msg-bubble {
+      padding: 9px 14px;
+      border-radius: 16px;
+      font-size: .9rem;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+    /* Bolha de quem enviou (eu): escura */
+    .msg.mine  .msg-bubble { background: var(--bubble-me); color: #fff; border-radius: 16px 4px 16px 16px; }
+    /* Bolha de outro usuário: branca */
+    .msg.other .msg-bubble { background: var(--bubble-other); color: var(--text); border-radius: 4px 16px 16px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+
+    /* ── Área de digitação ────────────────────────────────── */
+    .input-area {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Campo de texto que cresce conforme o conteúdo */
+    #msg-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: .9rem;
+      padding: 10px 14px;
+      outline: none;
+      resize: none;
+      min-height: 42px;
+      max-height: 120px;
+      line-height: 1.5;
+      overflow-y: auto;
+      transition: border-color .2s;
+    }
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+
+    /* Botão de enviar */
+    #send-btn {
+      padding: 10px 18px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all .18s;
+    }
+    #send-btn:hover   { background: #a93226; }
+    #send-btn:disabled { opacity: .4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<!-- ── Cabeçalho fixo ──────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    Ceap Chat
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <!-- O status muda conforme a conexão WebSocket -->
+    <span id="status-pill" class="status-pill disconnected">Desconectado</span>
+    <!-- Botão que abre/fecha o drawer; só aparece após o join -->
+    <button id="users-toggle">
+      <span class="toggle-dot"></span>
+      <span id="users-count">0 online</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Overlay: fundo escuro ao abrir o drawer ─────────────── -->
+<!-- Clicar nele fecha o drawer -->
+<div id="drawer-overlay"></div>
+
+<!-- ── Drawer: painel deslizante de usuários online ─────────── -->
+<div id="users-drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Online agora</span>
+    <!-- Botão × para fechar -->
+    <button class="drawer-close" id="drawer-close">✕</button>
+  </div>
+  <!-- Lista de usuários preenchida pelo JS -->
+  <div id="user-list"></div>
+</div>
+
+<!-- ── Tela de entrada ─────────────────────────────────────── -->
+<!-- Visível antes do usuário entrar no chat -->
+<div id="join-screen">
+  <div class="join-card">
+    <h2>Bem-vindo ao<br/><span>Ceap Chat</span></h2>
+    <p>Chat em tempo real entre máquinas na mesma rede. Escolha um nome para entrar.</p>
+    <div class="field">
+      <label>Seu nome</label>
+      <input id="name-input" type="text" placeholder="Ex: João" maxlength="20" autocomplete="off" />
+    </div>
+    <button class="btn-primary" id="join-btn">Entrar no chat →</button>
+  </div>
+</div>
+
+<!-- ── Tela de chat ─────────────────────────────────────────── -->
+<!-- Fica oculta até o join ser feito -->
+<div id="chat-screen">
+
+  <!-- Área principal (ocupa a tela toda agora) -->
+  <div class="chat-main">
+    <!-- Onde as mensagens aparecem -->
+    <div id="messages"></div>
+
+    <!-- Campo para digitar e enviar -->
+    <div class="input-area">
+      <textarea id="msg-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
+      <button id="send-btn">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Referências aos elementos do HTML ─────────────────────
+  const joinScreen    = document.getElementById("join-screen");
+  const chatScreen    = document.getElementById("chat-screen");
+  const nameInput     = document.getElementById("name-input");
+  const joinBtn       = document.getElementById("join-btn");
+  const statusPill    = document.getElementById("status-pill");
+  const messagesEl    = document.getElementById("messages");
+  const msgInput      = document.getElementById("msg-input");
+  const sendBtn       = document.getElementById("send-btn");
+  const userListEl    = document.getElementById("user-list");
+  const usersToggle   = document.getElementById("users-toggle");
+  const usersCount    = document.getElementById("users-count");
+  const usersDrawer   = document.getElementById("users-drawer");
+  const drawerOverlay = document.getElementById("drawer-overlay");
+  const drawerClose   = document.getElementById("drawer-close");
+
+  // ── Estado local ──────────────────────────────────────────
+  let ws     = null; // objeto da conexão WebSocket
+  let myName = "";   // nome do usuário nesta aba
+
+  // ── Lógica do drawer (painel de usuários) ─────────────────
+
+  // Abre o drawer + mostra o overlay
+  function abrirDrawer() {
+    usersDrawer.classList.add("open");
+    drawerOverlay.classList.add("show");
+  }
+
+  // Fecha o drawer + esconde o overlay
+  function fecharDrawer() {
+    usersDrawer.classList.remove("open");
+    drawerOverlay.classList.remove("show");
+  }
+
+  // Botão no cabeçalho abre o drawer
+  usersToggle.addEventListener("click", abrirDrawer);
+
+  // Botão × dentro do drawer fecha
+  drawerClose.addEventListener("click", fecharDrawer);
+
+  // Clicar no overlay escuro também fecha
+  drawerOverlay.addEventListener("click", fecharDrawer);
+
+  // ── Atualiza o badge de status no cabeçalho ───────────────
+  function setStatus(estado) {
+    const textos = {
+      connected:    "Conectado",
+      disconnected: "Desconectado",
+      connecting:   "Conectando..."
+    };
+    statusPill.className = "status-pill " + estado;
+    statusPill.textContent = textos[estado];
+  }
+
+  // ── Entrar no chat ────────────────────────────────────────
+  // Chamada quando o usuário clica em "Entrar" ou pressiona Enter
+  function entrar() {
+    const nome = nameInput.value.trim();
+    if (!nome) { nameInput.focus(); return; }
+    myName = nome;
+    conectar();
+  }
+
+  joinBtn.addEventListener("click", entrar);
+  nameInput.addEventListener("keydown", e => { if (e.key === "Enter") entrar(); });
+
+  // ── Abrir conexão WebSocket ───────────────────────────────
+  // Conecta ao servidor rodando na mesma máquina (ou IP da rede)
+  function conectar() {
+    joinBtn.disabled = true;
+    setStatus("connecting");
+
+    // O protocolo muda conforme o site usa HTTP ou HTTPS
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}`);
+
+    // Quando a conexão abre, manda o nome do usuário para o servidor
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "join", name: myName }));
+    };
+
+    // Quando o servidor manda qualquer mensagem
+    ws.onmessage = (e) => {
+      const dados = JSON.parse(e.data);
+      tratarMensagem(dados);
+    };
+
+    // Quando a conexão cai (servidor parou, rede caiu, etc.)
+    ws.onclose = () => {
+      setStatus("disconnected");
+      joinBtn.disabled = false;
+    };
+
+    ws.onerror = () => {
+      setStatus("disconnected");
+      joinBtn.disabled = false;
+    };
+  }
+
+  // ── Processar mensagens recebidas do servidor ─────────────
+  // Cada mensagem tem um "type" que diz o que fazer com ela
+  function tratarMensagem(dados) {
+
+    // Servidor confirmou a entrada: mostra a tela de chat
+    if (dados.type === "welcome") {
+      joinScreen.style.display = "none";
+      chatScreen.classList.add("active");
+      setStatus("connected");
+      // Mostra o botão de toggle de usuários no cabeçalho
+      usersToggle.style.display = "flex";
+
+    // Mensagem de sistema: ex "João entrou no chat"
+    } else if (dados.type === "system") {
+      adicionarSistema(dados.text);
+
+    // Mensagem de texto de um usuário
+    } else if (dados.type === "message") {
+      adicionarMensagem(dados);
+
+    // Lista atualizada de quem está online
+    } else if (dados.type === "user_list") {
+      renderizarUsuarios(dados.users);
+    }
+  }
+
+  // ── Formatar hora ─────────────────────────────────────────
+  // Converte ISO string ("2024-01-01T12:30:00.000Z") para "12:30"
+  function formatarHora(iso) {
+    return new Date(iso).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+
+  // ── Adicionar mensagem de sistema na lista ────────────────
+  function adicionarSistema(texto) {
+    const el = document.createElement("div");
+    el.className = "system-msg";
+    el.textContent = texto;
+    messagesEl.appendChild(el);
+    rolarParaBaixo();
+  }
+
+  // ── Adicionar mensagem de chat na lista ───────────────────
+  function adicionarMensagem(dados) {
+    // Verifica se a mensagem foi enviada por mim
+    const minha = dados.from === myName;
+
+    // Cria o bloco da mensagem
+    const bloco = document.createElement("div");
+    bloco.className = "msg " + (minha ? "mine" : "other");
+
+    // Linha com nome e hora
+    const meta = document.createElement("div");
+    meta.className = "msg-meta";
+
+    const nome = document.createElement("span");
+    nome.className = "msg-name";
+    nome.style.color = dados.color; // cor única deste usuário
+    nome.textContent = minha ? "Você" : dados.from;
+
+    const hora = document.createElement("span");
+    hora.textContent = formatarHora(dados.time);
+
+    meta.appendChild(nome);
+    meta.appendChild(hora);
+
+    // Bolha com o texto
+    const bolha = document.createElement("div");
+    bolha.className = "msg-bubble";
+    bolha.textContent = dados.text; // textContent é seguro (não executa HTML)
+
+    bloco.appendChild(meta);
+    bloco.appendChild(bolha);
+    messagesEl.appendChild(bloco);
+    rolarParaBaixo();
+  }
+
+  // ── Atualizar lista de usuários no drawer ────────────────
+  function renderizarUsuarios(usuarios) {
+    userListEl.innerHTML = ""; // limpa a lista atual
+
+    // Atualiza o número no botão do cabeçalho
+    usersCount.textContent = `${usuarios.length} online`;
+
+    usuarios.forEach(u => {
+      const item = document.createElement("div");
+      item.className = "user-item";
+
+      // Bolinha colorida
+      const dot = document.createElement("span");
+      dot.className = "user-dot";
+      dot.style.background = u.color;
+
+      // Nome
+      const nome = document.createElement("span");
+      nome.className = "user-name" + (u.name === myName ? " me" : "");
+      nome.textContent = u.name === myName ? u.name + " (você)" : u.name;
+
+      item.appendChild(dot);
+      item.appendChild(nome);
+      userListEl.appendChild(item);
+    });
+  }
+
+  // ── Rolar para a última mensagem ──────────────────────────
+  function rolarParaBaixo() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  // ── Enviar mensagem ───────────────────────────────────────
+  function enviarMensagem() {
+    const texto = msgInput.value.trim();
+    if (!texto || !ws || ws.readyState !== 1) return;
+
+    // Manda para o servidor, que vai redistribuir para todos
+    ws.send(JSON.stringify({ type: "message", text: texto }));
+
+    msgInput.value = "";
+    msgInput.style.height = "auto"; // reseta altura do campo
+  }
+
+  sendBtn.addEventListener("click", enviarMensagem);
+
+  // Enter envia; Shift+Enter quebra linha
+  msgInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensagem();
+    }
+  });
+
+  // Faz o campo de texto crescer conforme o usuário digita
+  msgInput.addEventListener("input", () => {
+    msgInput.style.height = "auto";
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + "px";
+  });
+</script>
+</body>
+</html>
