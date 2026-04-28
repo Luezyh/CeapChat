@@ -20,16 +20,11 @@ function getLocalIP() {
   return "localhost";
 }
 
-// ── Cores dos usuários ────────────────────────────────────────
 const CORES = ["#f97316","#3b82f6","#22c55e","#ec4899","#a855f7","#eab308","#06b6d4","#ef4444"];
 let indiceCor = 0;
 
-// ── Estado do chat ────────────────────────────────────────────
-// Map: ws → { name, color, isAdmin }
-let clients = new Map();
-
-// ── Estado do jogo ────────────────────────────────────────────
-let palavras  = [];   // lista de palavras cadastradas pelo admin
+let clients  = new Map(); // ws → { name, color, isAdmin }
+let palavras = [];
 let jogoAtivo = false;
 
 // ── Servidor HTTP ─────────────────────────────────────────────
@@ -46,14 +41,12 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-// ── Servidor WebSocket ────────────────────────────────────────
+// ── WebSocket ─────────────────────────────────────────────────
 const wss = new WebSocketServer({ server: httpServer });
 
 function broadcast(dados) {
   const msg = JSON.stringify(dados);
-  for (const [ws] of clients) {
-    if (ws.readyState === 1) ws.send(msg);
-  }
+  for (const [ws] of clients) { if (ws.readyState === 1) ws.send(msg); }
 }
 
 function enviarPara(ws, dados) {
@@ -61,23 +54,18 @@ function enviarPara(ws, dados) {
 }
 
 function enviarListaUsuarios() {
-  const usuarios = [...clients.values()].map(c => ({
-    name: c.name, color: c.color, isAdmin: c.isAdmin
-  }));
+  const usuarios = [...clients.values()].map(c => ({ name: c.name, color: c.color, isAdmin: c.isAdmin }));
   broadcast({ type: "user_list", users: usuarios });
 }
 
 function enviarPalavrasParaAdmin() {
-  for (const [ws, cliente] of clients) {
-    if (cliente.isAdmin) {
-      enviarPara(ws, { type: "word_list", words: palavras });
-    }
+  for (const [ws, c] of clients) {
+    if (c.isAdmin) enviarPara(ws, { type: "word_list", words: palavras });
   }
 }
 
-// ── Lógica principal de conexão ───────────────────────────────
 wss.on("connection", (ws) => {
-  const cor = CORES[indiceCor % CORES.length];
+  const cor    = CORES[indiceCor % CORES.length];
   indiceCor++;
   const ehAdmin = clients.size === 0;
   clients.set(ws, { name: null, color: cor, isAdmin: ehAdmin });
@@ -106,7 +94,6 @@ wss.on("connection", (ws) => {
         color: cliente.color,
         text: String(dados.text || "").slice(0, 2000),
         time: new Date().toISOString(),
-        // Repassa os dados de resposta, se houver
         replyTo: dados.replyTo || null
       });
 
@@ -124,16 +111,24 @@ wss.on("connection", (ws) => {
       palavras = palavras.filter(p => p !== dados.word);
       enviarPalavrasParaAdmin();
 
-    // ── reset_words: admin limpou toda a lista ────────────────
+    // ── reset_words ───────────────────────────────────────────
     } else if (dados.type === "reset_words") {
       if (!cliente.isAdmin) return;
-      palavras = []; // esvazia o array
+      palavras = [];
       enviarPalavrasParaAdmin();
 
     // ── start_game ────────────────────────────────────────────
     } else if (dados.type === "start_game") {
       if (!cliente.isAdmin) return;
+
       const jogadores = [...clients.values()].filter(c => c.name);
+
+      // Quantidade de impostores solicitada pelo admin (mínimo 1, máximo metade dos jogadores)
+      const numImpostores = Math.min(
+        Math.max(1, parseInt(dados.numImpostores) || 1),
+        Math.floor(jogadores.length / 2)
+      );
+
       if (jogadores.length < 2) {
         enviarPara(ws, { type: "game_error", text: "Precisa de pelo menos 2 jogadores." });
         return;
@@ -142,15 +137,30 @@ wss.on("connection", (ws) => {
         enviarPara(ws, { type: "game_error", text: "Adicione pelo menos uma palavra." });
         return;
       }
+
       jogoAtivo = true;
+
       const palavraEscolhida = palavras[Math.floor(Math.random() * palavras.length)];
-      const impostorIndex    = Math.floor(Math.random() * jogadores.length);
-      const impostorNome     = jogadores[impostorIndex].name;
-      broadcast({ type: "system", text: "🎮 Jogo do Impostor começou! Verifique sua tela.", time: new Date().toISOString() });
+
+      // Sorteia os impostores: embaralha a lista e pega os N primeiros
+      const embaralhados = [...jogadores].sort(() => Math.random() - 0.5);
+      const impostores   = new Set(embaralhados.slice(0, numImpostores).map(j => j.name));
+
+      broadcast({
+        type: "system",
+        text: `🎮 Jogo do Impostor começou! (${numImpostores} impostor${numImpostores > 1 ? "es" : ""}) Verifique sua tela.`,
+        time: new Date().toISOString()
+      });
+
+      // Envia individualmente para cada jogador
       for (const [wsJogador, dadosJogador] of clients) {
         if (!dadosJogador.name) continue;
-        const ehImpostor = dadosJogador.name === impostorNome;
-        enviarPara(wsJogador, { type: "game_start", isImpostor: ehImpostor, word: ehImpostor ? null : palavraEscolhida });
+        const ehImpostor = impostores.has(dadosJogador.name);
+        enviarPara(wsJogador, {
+          type: "game_start",
+          isImpostor: ehImpostor,
+          word: ehImpostor ? null : palavraEscolhida
+        });
       }
 
     // ── end_game ──────────────────────────────────────────────
@@ -161,7 +171,6 @@ wss.on("connection", (ws) => {
     }
   });
 
-  // ── Desconexão ───────────────────────────────────────────────
   ws.on("close", () => {
     const cliente = clients.get(ws);
     clients.delete(ws);
@@ -179,7 +188,6 @@ wss.on("connection", (ws) => {
   });
 });
 
-// ── Inicia o servidor ─────────────────────────────────────────
 httpServer.listen(PORT, "0.0.0.0", () => {
   const ip = getLocalIP();
   console.log(`\n✅ Ceap Chat rodando!`);

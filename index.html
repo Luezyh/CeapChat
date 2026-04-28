@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
   <title>Ceap Chat</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
@@ -22,14 +22,20 @@
       --mono:         'JetBrains Mono', monospace;
     }
 
+    /* 100dvh: respeita a barra do navegador mobile corretamente */
+    html, body {
+      height: 100%;
+    }
     body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--font);
-      height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      /* Garante que o body nunca fica menor que a tela */
+      min-height: 100dvh;
+      max-height: 100dvh;
     }
 
     /* ── Cabeçalho ─────────────────────────────────────────── */
@@ -37,11 +43,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 20px;
+      padding: 12px 16px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       gap: 10px;
+      /* Safe area para notch no topo (iPhone) */
+      padding-top: max(12px, env(safe-area-inset-top));
     }
     .logo {
       font-size: 1.1rem;
@@ -79,7 +87,6 @@
     .status-pill.disconnected { background: #fee2e2; color: #991b1b; }
     .status-pill.connecting   { background: #fef3c7; color: #92400e; }
 
-    /* Botões do cabeçalho */
     .header-btn {
       display: none;
       align-items: center;
@@ -87,7 +94,7 @@
       background: var(--bg);
       border: 1.5px solid var(--border);
       border-radius: 20px;
-      padding: 5px 10px 5px 7px;
+      padding: 6px 11px 6px 8px;
       cursor: pointer;
       font-family: var(--font);
       font-size: .8rem;
@@ -95,6 +102,8 @@
       color: var(--text);
       transition: all .18s;
       white-space: nowrap;
+      /* Área de toque mínima para mobile */
+      min-height: 36px;
     }
     .header-btn:hover { background: var(--border); }
     .header-btn .btn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -108,6 +117,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
+      overflow-y: auto;
     }
     .join-card {
       background: var(--surface);
@@ -132,14 +142,17 @@
       border-radius: var(--radius);
       color: var(--text);
       font-family: var(--font);
-      font-size: .95rem;
-      padding: 12px 14px;
+      /* 16px mínimo evita zoom automático no iOS */
+      font-size: 1rem;
+      padding: 13px 14px;
       outline: none;
       transition: border-color .2s;
+      width: 100%;
+      -webkit-appearance: none;
     }
     .field input:focus { border-color: var(--accent); }
     .btn-primary {
-      padding: 13px 20px;
+      padding: 14px 20px;
       border-radius: var(--radius);
       font-family: var(--font);
       font-weight: 700;
@@ -149,25 +162,41 @@
       background: var(--accent);
       color: #fff;
       transition: all .18s;
+      -webkit-appearance: none;
     }
-    .btn-primary:hover   { background: #a93226; transform: translateY(-1px); }
-    .btn-primary:active  { transform: translateY(0); }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-primary:hover   { background: #a93226; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
     /* ── Layout do chat ────────────────────────────────────── */
-    #chat-screen { flex: 1; display: none; overflow: hidden; }
+    #chat-screen {
+      flex: 1;
+      display: none;
+      overflow: hidden;
+      /* Permite que o chat encolha quando o teclado abre no mobile */
+      min-height: 0;
+    }
     #chat-screen.active { display: flex; }
-    .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0;
+    }
 
     /* ── Mensagens ─────────────────────────────────────────── */
     #messages {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 20px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 6px;
       scroll-behavior: smooth;
+      /* Impede que o scroll trave no iOS */
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
     #messages::-webkit-scrollbar { width: 4px; }
     #messages::-webkit-scrollbar-track { background: transparent; }
@@ -185,7 +214,7 @@
     }
     .system-msg::before, .system-msg::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    .msg { display: flex; flex-direction: column; gap: 3px; max-width: 80%; }
+    .msg { display: flex; flex-direction: column; gap: 3px; max-width: 82%; }
     .msg.mine  { align-self: flex-end;   align-items: flex-end; }
     .msg.other { align-self: flex-start; align-items: flex-start; }
     .msg-meta { display: flex; align-items: baseline; gap: 6px; font-size: .7rem; color: var(--muted); font-family: var(--mono); }
@@ -193,17 +222,16 @@
     .msg-bubble {
       padding: 9px 13px;
       border-radius: 16px;
-      font-size: .88rem;
+      font-size: .9rem;
       line-height: 1.55;
       word-break: break-word;
       position: relative;
-      cursor: pointer; /* indica que é clicável para responder */
+      cursor: pointer;
     }
-    .msg-bubble:hover .reply-hint { opacity: 1; }
     .msg.mine  .msg-bubble { background: var(--bubble-me);    color: #fff;        border-radius: 16px 4px 16px 16px; }
     .msg.other .msg-bubble { background: var(--bubble-other); color: var(--text); border-radius: 4px 16px 16px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
 
-    /* Dica "↩ responder" que aparece ao passar o mouse */
+    /* Dica de resposta (hover no desktop, toque no mobile) */
     .reply-hint {
       position: absolute;
       top: -18px;
@@ -217,9 +245,11 @@
     }
     .msg.mine  .reply-hint { right: 4px; }
     .msg.other .reply-hint { left: 4px; }
+    .msg-bubble:hover .reply-hint { opacity: 1; }
+    /* No mobile a dica fica sempre visível para indicar que é clicável */
+    @media (hover: none) { .reply-hint { opacity: .5 !important; } }
 
-    /* ── Bloco de citação dentro da bolha ──────────────────── */
-    /* Aparece quando uma mensagem é uma resposta a outra */
+    /* Citação dentro da bolha */
     .reply-quote {
       font-size: .75rem;
       font-family: var(--mono);
@@ -231,39 +261,26 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 200px;
+      max-width: 220px;
     }
 
-    /* ── Preview de resposta acima do campo de digitação ───── */
+    /* Preview de resposta acima do input */
     #reply-preview {
-      display: none; /* aparece só quando o usuário clica em responder */
+      display: none;
       align-items: center;
       gap: 10px;
-      padding: 8px 16px;
+      padding: 8px 14px;
       background: var(--surface);
       border-top: 1px solid var(--border);
       font-size: .8rem;
       font-family: var(--mono);
       color: var(--muted);
-    }
-    #reply-preview.show { display: flex; }
-    #reply-preview-text {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    #reply-preview-text strong { color: var(--text); }
-    #reply-cancel {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 1rem;
-      padding: 0 4px;
-      transition: color .15s;
       flex-shrink: 0;
     }
+    #reply-preview.show { display: flex; }
+    #reply-preview-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #reply-preview-text strong { color: var(--text); }
+    #reply-cancel { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; padding: 4px 6px; transition: color .15s; flex-shrink: 0; min-width: 32px; min-height: 32px; }
     #reply-cancel:hover { color: var(--accent); }
 
     /* ── Campo de digitação ────────────────────────────────── */
@@ -271,9 +288,11 @@
       display: flex;
       align-items: flex-end;
       gap: 8px;
-      padding: 12px 16px;
+      padding: 10px 12px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
       background: var(--surface);
       border-top: 1px solid var(--border);
+      flex-shrink: 0;
     }
     #msg-input {
       flex: 1;
@@ -282,20 +301,25 @@
       border-radius: var(--radius);
       color: var(--text);
       font-family: var(--font);
-      font-size: .9rem;
-      padding: 10px 13px;
+      /* 16px evita zoom automático no iOS ao focar */
+      font-size: 1rem;
+      padding: 11px 13px;
       outline: none;
       resize: none;
-      min-height: 42px;
+      min-height: 44px;
       max-height: 120px;
       line-height: 1.5;
       overflow-y: auto;
       transition: border-color .2s;
+      -webkit-appearance: none;
+      /* Força o textarea a não sumir atrás do teclado */
+      position: relative;
+      z-index: 1;
     }
     #msg-input:focus { border-color: var(--accent); }
     #msg-input::placeholder { color: var(--muted); }
     #send-btn {
-      padding: 10px 16px;
+      padding: 11px 16px;
       background: var(--accent);
       border: none;
       border-radius: var(--radius);
@@ -303,139 +327,291 @@
       font-size: 1rem;
       cursor: pointer;
       flex-shrink: 0;
-      transition: all .18s;
+      transition: background .18s;
+      /* Área de toque mínima */
+      min-width: 44px;
+      min-height: 44px;
     }
     #send-btn:hover { background: #a93226; }
 
-    /* ── Overlay ───────────────────────────────────────────── */
+    /* ── Overlay (fundo escuro dos modais/drawers) ──────────── */
     .overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.4);
+      background: rgba(0,0,0,.45);
       z-index: 10;
       animation: fadeIn .2s ease;
     }
     .overlay.show { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* ── Drawer base ───────────────────────────────────────── */
-    .drawer {
+    /* ── Drawer de usuários (direita) ──────────────────────── */
+    #users-drawer {
       position: fixed;
-      top: 0; bottom: 0;
+      top: 0; right: 0; bottom: 0;
+      width: min(240px, 85vw);
       background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 24px rgba(0,0,0,.1);
       z-index: 11;
       display: flex;
       flex-direction: column;
       padding: 20px 14px;
+      padding-top: max(20px, env(safe-area-inset-top));
       gap: 4px;
-      transition: transform .28s cubic-bezier(.4,0,.2,1);
       overflow-y: auto;
-    }
-    .drawer-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0; }
-    .drawer-title { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-    .drawer-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; padding: 2px 6px; border-radius: 4px; transition: all .15s; }
-    .drawer-close:hover { background: var(--bg); color: var(--text); }
-
-    /* ── Drawer de usuários (direita) ──────────────────────── */
-    #users-drawer {
-      right: 0;
-      width: 210px;
-      border-left: 1px solid var(--border);
-      box-shadow: -4px 0 24px rgba(0,0,0,.1);
       transform: translateX(100%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
     }
     #users-drawer.open { transform: translateX(0); }
-    .user-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: .83rem; transition: background .15s; }
+    .drawer-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0; }
+    .drawer-title { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .drawer-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; padding: 4px 8px; border-radius: 4px; transition: all .15s; min-width: 36px; min-height: 36px; }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+    .user-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; font-size: .85rem; transition: background .15s; }
     .user-item:hover { background: var(--bg); }
-    .user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
     .user-name.me { font-weight: 700; }
-    .admin-badge { font-size: .58rem; font-weight: 700; background: #fdecea; color: var(--accent); border-radius: 4px; padding: 1px 5px; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; }
+    .admin-badge { font-size: .58rem; font-weight: 700; background: #fdecea; color: var(--accent); border-radius: 4px; padding: 2px 5px; text-transform: uppercase; flex-shrink: 0; }
 
-    /* ── Drawer do jogo (esquerda) ─────────────────────────── */
-    #game-drawer {
-      left: 0;
-      width: 280px;
-      border-right: 1px solid var(--border);
-      box-shadow: 4px 0 24px rgba(0,0,0,.1);
-      transform: translateX(-100%);
-      gap: 14px;
+    /* ── Modal do jogo (pop-up central) ────────────────────── */
+    /* Aparece no centro da tela, diferente do drawer lateral */
+    #game-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
-    #game-drawer.open { transform: translateX(0); }
+    #game-modal.show { display: flex; }
 
-    .game-drawer-title { font-size: 1rem; font-weight: 800; letter-spacing: -.02em; }
-    .game-drawer-title span { color: var(--accent); }
-    .section-label { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 8px 48px rgba(0,0,0,.18);
+      width: 100%;
+      max-width: 440px;
+      max-height: 90dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalIn .22s ease;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.95) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
 
-    /* Textarea para colar lista de palavras */
+    /* Cabeçalho do modal */
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .modal-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
+    .modal-title span { color: var(--accent); }
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all .15s;
+      min-width: 36px;
+      min-height: 36px;
+    }
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+
+    /* Corpo do modal com scroll */
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .section-label {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* Textarea para colar lista */
     #word-textarea {
       background: var(--bg);
       border: 1.5px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
       font-family: var(--mono);
-      font-size: .82rem;
+      font-size: .85rem;
       padding: 10px 12px;
       outline: none;
       resize: none;
-      height: 110px;
+      height: 100px;
       line-height: 1.7;
       width: 100%;
       transition: border-color .2s;
-      flex-shrink: 0;
+      -webkit-appearance: none;
     }
     #word-textarea:focus { border-color: var(--accent); }
     #word-textarea::placeholder { color: var(--muted); }
 
-    /* Botões lado a lado: importar e resetar */
-    .word-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    /* Botões importar + resetar */
+    .word-actions { display: flex; gap: 8px; }
     .word-actions button {
       flex: 1;
-      padding: 9px 8px;
+      padding: 10px 8px;
       border: none;
       border-radius: var(--radius);
       font-family: var(--font);
-      font-size: .82rem;
+      font-size: .83rem;
       font-weight: 700;
       cursor: pointer;
       transition: all .18s;
+      min-height: 42px;
     }
     #add-word-btn  { background: var(--accent); color: #fff; }
     #add-word-btn:hover  { background: #a93226; }
-    /* Botão de reset: discreto, mas visível */
     #reset-words-btn { background: var(--bg); color: var(--muted); border: 1.5px solid var(--border) !important; }
-    #reset-words-btn:hover { border-color: var(--accent) !important; color: var(--accent); }
+    #reset-words-btn:hover { border-color: var(--accent) !important; color: var(--accent); background: #fdecea; }
 
     /* Lista de palavras */
-    #word-list-admin { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .word-tag { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: .83rem; }
-    .word-tag-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .9rem; padding: 0 2px; border-radius: 4px; transition: color .15s; }
-    .word-tag-remove:hover { color: var(--accent); }
+    #word-list-admin { display: flex; flex-wrap: wrap; gap: 6px; }
+    .word-tag {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 8px 4px 10px;
+      font-size: .82rem;
+    }
+    .word-tag-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .8rem;
+      line-height: 1;
+      padding: 2px 3px;
+      border-radius: 50%;
+      transition: all .15s;
+      min-width: 24px;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .word-tag-remove:hover { color: var(--accent); background: #fdecea; }
 
-    .divider { height: 1px; background: var(--border); flex-shrink: 0; }
+    /* Separador */
+    .divider { height: 1px; background: var(--border); }
 
-    /* Botão iniciar jogo */
+    /* ── Seletor de impostores ──────────────────────────────── */
+    .impostor-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .impostor-label { font-size: .88rem; font-weight: 600; }
+    .impostor-label small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; }
+    /* Stepper: botões − e + com número no meio */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .stepper button {
+      background: var(--bg);
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      color: var(--text);
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .stepper button:hover { background: var(--border); }
+    .stepper button:disabled { color: var(--muted); cursor: not-allowed; }
+    #impostor-count-display {
+      width: 40px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--accent);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      padding: 0 4px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    /* Erro do jogo */
+    #game-error {
+      font-size: .8rem;
+      color: var(--accent);
+      font-family: var(--mono);
+      display: none;
+      padding: 8px 10px;
+      background: #fdecea;
+      border-radius: 8px;
+    }
+    #game-error.show { display: block; }
+
+    /* Rodapé do modal com botões de ação */
+    .modal-footer {
+      padding: 14px 20px;
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
     #start-game-btn {
-      padding: 13px;
+      padding: 14px;
       background: var(--accent);
       border: none;
       border-radius: var(--radius);
       color: #fff;
       font-family: var(--font);
-      font-size: .92rem;
+      font-size: .95rem;
       font-weight: 700;
       cursor: pointer;
       transition: all .18s;
       text-align: center;
-      flex-shrink: 0;
+      min-height: 48px;
     }
-    #start-game-btn:hover { background: #a93226; transform: translateY(-1px); }
-
-    /* Botão encerrar jogo */
+    #start-game-btn:hover { background: #a93226; }
     #end-game-btn {
       display: none;
-      padding: 10px;
+      padding: 12px;
       background: none;
       border: 1.5px solid var(--border);
       border-radius: var(--radius);
@@ -446,29 +622,16 @@
       cursor: pointer;
       transition: all .18s;
       text-align: center;
-      flex-shrink: 0;
+      min-height: 44px;
     }
     #end-game-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Erro do jogo */
-    #game-error {
-      font-size: .78rem;
-      color: var(--accent);
-      font-family: var(--mono);
-      display: none;
-      padding: 8px 10px;
-      background: #fdecea;
-      border-radius: 8px;
-      flex-shrink: 0;
-    }
-    #game-error.show { display: block; }
 
     /* ── Tela de revelação ─────────────────────────────────── */
     #reveal-screen {
       display: none;
       position: fixed;
       inset: 0;
-      z-index: 20;
+      z-index: 30;
       align-items: center;
       justify-content: center;
       padding: 24px;
@@ -480,57 +643,48 @@
     .reveal-card { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; max-width: 380px; width: 100%; }
     .reveal-role { font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; opacity: .6; }
     .reveal-word { font-size: 2.8rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-    .reveal-hint { font-size: .88rem; opacity: .6; line-height: 1.5; max-width: 280px; }
+    .reveal-hint { font-size: .88rem; opacity: .6; line-height: 1.6; max-width: 280px; }
     .reveal-card.player { color: #fff; }
     .reveal-card.player .reveal-word { color: #fbbf24; }
     .reveal-card.impostor { color: #fff; }
     .reveal-card.impostor .reveal-word { color: #f87171; }
     .reveal-close {
       margin-top: 6px;
-      padding: 11px 28px;
+      padding: 13px 32px;
       background: rgba(255,255,255,.15);
       border: 1.5px solid rgba(255,255,255,.25);
       border-radius: 20px;
       color: #fff;
       font-family: var(--font);
-      font-size: .88rem;
+      font-size: .9rem;
       font-weight: 600;
       cursor: pointer;
       transition: background .18s;
+      min-height: 48px;
     }
     .reveal-close:hover { background: rgba(255,255,255,.25); }
 
     /* ── Responsividade mobile ─────────────────────────────── */
     @media (max-width: 480px) {
-      /* Cabeçalho menor */
-      header { padding: 10px 14px; }
+      header { padding: 10px 12px; }
       .logo { font-size: 1rem; }
-
-      /* Status some no mobile para economizar espaço */
       #status-pill { display: none; }
 
-      /* Mensagens ocupam mais largura */
-      .msg { max-width: 90%; }
-
-      /* Campos e padding reduzidos */
-      #messages { padding: 14px 14px; }
-      .input-area { padding: 10px 12px; gap: 7px; }
-      #msg-input { font-size: .85rem; padding: 9px 11px; }
-      #send-btn { padding: 9px 13px; font-size: .9rem; }
-
-      /* Drawers ocupam mais da tela no mobile */
-      #users-drawer { width: 80vw; }
-      #game-drawer  { width: 88vw; }
-
-      /* Join card sem padding excessivo */
-      .join-card { padding: 28px 22px; gap: 16px; }
+      .join-card { padding: 28px 20px; gap: 16px; border-radius: 16px; }
       .join-card h2 { font-size: 1.5rem; }
 
-      /* Revelação com palavra menor */
-      .reveal-word { font-size: 2.2rem; }
+      #messages { padding: 12px; }
+      .msg { max-width: 88%; }
 
-      /* Preview de resposta mais compacto */
-      #reply-preview { padding: 7px 12px; font-size: .75rem; }
+      .input-area { padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); gap: 6px; }
+
+      .modal-box { border-radius: 16px; max-height: 92dvh; }
+      .modal-header { padding: 14px 16px 12px; }
+      .modal-body { padding: 14px 16px; }
+      .modal-footer { padding: 12px 16px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+      .reveal-word { font-size: 2.2rem; }
+      .reveal-hint { font-size: .82rem; }
     }
   </style>
 </head>
@@ -545,13 +699,13 @@
   <div class="header-right">
     <span id="status-pill" class="status-pill disconnected">Desconectado</span>
 
-    <!-- Botão do painel do Impostor (só para o admin) -->
+    <!-- Botão que abre o modal do jogo (só para admin) -->
     <button class="header-btn" id="game-btn">
       <span class="btn-dot" style="background:var(--accent)"></span>
       <span>Impostor</span>
     </button>
 
-    <!-- Botão de usuários online -->
+    <!-- Botão que abre o drawer de usuários -->
     <button class="header-btn" id="users-toggle">
       <span class="btn-dot" style="background:#22c55e"></span>
       <span id="users-count">0 online</span>
@@ -559,11 +713,11 @@
   </div>
 </header>
 
-<!-- ── Overlay ──────────────────────────────────────────────── -->
+<!-- ── Overlay (fundo escuro) ───────────────────────────────── -->
 <div class="overlay" id="overlay"></div>
 
 <!-- ── Drawer de usuários (direita) ────────────────────────── -->
-<div class="drawer" id="users-drawer">
+<div id="users-drawer">
   <div class="drawer-header">
     <span class="drawer-title">Online agora</span>
     <button class="drawer-close" id="users-close">✕</button>
@@ -571,31 +725,59 @@
   <div id="user-list"></div>
 </div>
 
-<!-- ── Drawer do jogo Impostor (esquerda) ───────────────────── -->
-<div class="drawer" id="game-drawer">
-  <div class="drawer-header">
-    <span class="game-drawer-title">🕵️ Jogo do <span>Impostor</span></span>
-    <button class="drawer-close" id="game-close">✕</button>
+<!-- ── Modal do jogo do Impostor (centro da tela) ───────────── -->
+<div id="game-modal">
+  <div class="modal-box">
+
+    <!-- Cabeçalho do modal -->
+    <div class="modal-header">
+      <span class="modal-title">🕵️ Jogo do <span>Impostor</span></span>
+      <button class="modal-close" id="game-modal-close">✕</button>
+    </div>
+
+    <!-- Corpo com scroll -->
+    <div class="modal-body">
+
+      <!-- Palavras: textarea para colar lista -->
+      <span class="section-label">Palavras (cole uma por linha)</span>
+      <textarea id="word-textarea" placeholder="Futebol&#10;Música&#10;Viagem&#10;Cinema&#10;..."></textarea>
+      <div class="word-actions">
+        <button id="add-word-btn">⬆ Importar lista</button>
+        <button id="reset-words-btn">🗑 Resetar</button>
+      </div>
+
+      <!-- Lista de palavras já importadas -->
+      <span class="section-label">Palavras na lista</span>
+      <div id="word-list-admin">
+        <span style="font-size:.78rem;color:var(--muted);font-family:var(--mono)">Nenhuma palavra ainda.</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Seletor de quantidade de impostores -->
+      <div class="impostor-row">
+        <div class="impostor-label">
+          Nº de impostores
+          <small>Máximo: metade dos jogadores</small>
+        </div>
+        <div class="stepper">
+          <button id="impostor-dec" title="Diminuir">−</button>
+          <span id="impostor-count-display">1</span>
+          <button id="impostor-inc" title="Aumentar">+</button>
+        </div>
+      </div>
+
+      <!-- Erro -->
+      <div id="game-error"></div>
+
+    </div>
+
+    <!-- Rodapé com botões de ação -->
+    <div class="modal-footer">
+      <button id="start-game-btn">🎮 Iniciar Jogo do Impostor</button>
+      <button id="end-game-btn">Encerrar jogo</button>
+    </div>
   </div>
-
-  <span class="section-label">Palavras (cole uma por linha)</span>
-  <textarea id="word-textarea" placeholder="Futebol&#10;Música&#10;Viagem&#10;..."></textarea>
-
-  <!-- Botões importar e resetar lado a lado -->
-  <div class="word-actions">
-    <button id="add-word-btn">⬆ Importar</button>
-    <button id="reset-words-btn">🗑 Resetar lista</button>
-  </div>
-
-  <span class="section-label">Palavras na lista</span>
-  <div id="word-list-admin">
-    <span style="font-size:.78rem;color:var(--muted);font-family:var(--mono)">Nenhuma palavra ainda.</span>
-  </div>
-
-  <div class="divider"></div>
-  <div id="game-error"></div>
-  <button id="start-game-btn">🎮 Iniciar Impostor</button>
-  <button id="end-game-btn">Encerrar jogo</button>
 </div>
 
 <!-- ── Tela de entrada ──────────────────────────────────────── -->
@@ -616,7 +798,7 @@
   <div class="chat-main">
     <div id="messages"></div>
 
-    <!-- Preview da mensagem sendo respondida (aparece ao clicar em responder) -->
+    <!-- Preview de resposta -->
     <div id="reply-preview">
       <span>↩</span>
       <span id="reply-preview-text"></span>
@@ -642,45 +824,49 @@
 
 <script>
   // ── Referências ────────────────────────────────────────────
-  const joinScreen      = document.getElementById("join-screen");
-  const chatScreen      = document.getElementById("chat-screen");
-  const nameInput       = document.getElementById("name-input");
-  const joinBtn         = document.getElementById("join-btn");
-  const statusPill      = document.getElementById("status-pill");
-  const messagesEl      = document.getElementById("messages");
-  const msgInput        = document.getElementById("msg-input");
-  const sendBtn         = document.getElementById("send-btn");
-  const userListEl      = document.getElementById("user-list");
-  const usersCount      = document.getElementById("users-count");
-  const overlay         = document.getElementById("overlay");
-  const usersDrawer     = document.getElementById("users-drawer");
-  const usersToggle     = document.getElementById("users-toggle");
-  const usersClose      = document.getElementById("users-close");
-  const gameDrawer      = document.getElementById("game-drawer");
-  const gameBtn         = document.getElementById("game-btn");
-  const gameClose       = document.getElementById("game-close");
-  const wordTextarea    = document.getElementById("word-textarea");
-  const addWordBtn      = document.getElementById("add-word-btn");
-  const resetWordsBtn   = document.getElementById("reset-words-btn");
-  const wordListAdmin   = document.getElementById("word-list-admin");
-  const startGameBtn    = document.getElementById("start-game-btn");
-  const endGameBtn      = document.getElementById("end-game-btn");
-  const gameError       = document.getElementById("game-error");
-  const revealScreen    = document.getElementById("reveal-screen");
-  const revealCard      = document.getElementById("reveal-card");
-  const revealRole      = document.getElementById("reveal-role");
-  const revealWord      = document.getElementById("reveal-word");
-  const revealHint      = document.getElementById("reveal-hint");
-  const revealClose     = document.getElementById("reveal-close");
-  const replyPreview    = document.getElementById("reply-preview");
+  const joinScreen       = document.getElementById("join-screen");
+  const chatScreen       = document.getElementById("chat-screen");
+  const nameInput        = document.getElementById("name-input");
+  const joinBtn          = document.getElementById("join-btn");
+  const statusPill       = document.getElementById("status-pill");
+  const messagesEl       = document.getElementById("messages");
+  const msgInput         = document.getElementById("msg-input");
+  const sendBtn          = document.getElementById("send-btn");
+  const userListEl       = document.getElementById("user-list");
+  const usersCount       = document.getElementById("users-count");
+  const overlay          = document.getElementById("overlay");
+  const usersDrawer      = document.getElementById("users-drawer");
+  const usersToggle      = document.getElementById("users-toggle");
+  const usersClose       = document.getElementById("users-close");
+  const gameModal        = document.getElementById("game-modal");
+  const gameBtn          = document.getElementById("game-btn");
+  const gameModalClose   = document.getElementById("game-modal-close");
+  const wordTextarea     = document.getElementById("word-textarea");
+  const addWordBtn       = document.getElementById("add-word-btn");
+  const resetWordsBtn    = document.getElementById("reset-words-btn");
+  const wordListAdmin    = document.getElementById("word-list-admin");
+  const startGameBtn     = document.getElementById("start-game-btn");
+  const endGameBtn       = document.getElementById("end-game-btn");
+  const gameError        = document.getElementById("game-error");
+  const impostorDec      = document.getElementById("impostor-dec");
+  const impostorInc      = document.getElementById("impostor-inc");
+  const impostorDisplay  = document.getElementById("impostor-count-display");
+  const revealScreen     = document.getElementById("reveal-screen");
+  const revealCard       = document.getElementById("reveal-card");
+  const revealRole       = document.getElementById("reveal-role");
+  const revealWord       = document.getElementById("reveal-word");
+  const revealHint       = document.getElementById("reveal-hint");
+  const revealClose      = document.getElementById("reveal-close");
+  const replyPreview     = document.getElementById("reply-preview");
   const replyPreviewText = document.getElementById("reply-preview-text");
-  const replyCancel     = document.getElementById("reply-cancel");
+  const replyCancel      = document.getElementById("reply-cancel");
 
   // ── Estado local ───────────────────────────────────────────
-  let ws          = null;
-  let myName      = "";
-  let isAdmin     = false;
-  let replyTarget = null; // { from, text } da mensagem sendo respondida
+  let ws           = null;
+  let myName       = "";
+  let isAdmin      = false;
+  let replyTarget  = null;  // { from, text } da mensagem sendo respondida
+  let numImpostores = 1;    // quantidade de impostores selecionada
 
   // ── Status ─────────────────────────────────────────────────
   function setStatus(estado) {
@@ -689,22 +875,46 @@
     statusPill.textContent = textos[estado];
   }
 
-  // ── Drawers ─────────────────────────────────────────────────
-  function abrirDrawer(drawer) {
-    fecharTodosDrawers();
-    drawer.classList.add("open");
+  // ── Stepper de impostores ──────────────────────────────────
+  function atualizarStepper() {
+    impostorDisplay.textContent = numImpostores;
+    impostorDec.disabled = numImpostores <= 1;
+  }
+  impostorDec.addEventListener("click", () => { if (numImpostores > 1) { numImpostores--; atualizarStepper(); } });
+  impostorInc.addEventListener("click", () => { numImpostores++; atualizarStepper(); });
+  atualizarStepper();
+
+  // ── Modal do jogo ──────────────────────────────────────────
+  function abrirModal() {
+    fecharTudo();
+    gameModal.classList.add("show");
     overlay.classList.add("show");
   }
-  function fecharTodosDrawers() {
-    usersDrawer.classList.remove("open");
-    gameDrawer.classList.remove("open");
+  function fecharModal() {
+    gameModal.classList.remove("show");
     overlay.classList.remove("show");
   }
-  usersToggle.addEventListener("click", () => abrirDrawer(usersDrawer));
-  usersClose.addEventListener("click",  fecharTodosDrawers);
-  gameBtn.addEventListener("click",     () => abrirDrawer(gameDrawer));
-  gameClose.addEventListener("click",   fecharTodosDrawers);
-  overlay.addEventListener("click",     fecharTodosDrawers);
+
+  // ── Drawer de usuários ─────────────────────────────────────
+  function abrirDrawerUsuarios() {
+    fecharTudo();
+    usersDrawer.classList.add("open");
+    overlay.classList.add("show");
+  }
+  function fecharTudo() {
+    usersDrawer.classList.remove("open");
+    gameModal.classList.remove("show");
+    overlay.classList.remove("show");
+  }
+
+  gameBtn.addEventListener("click",        abrirModal);
+  gameModalClose.addEventListener("click", fecharModal);
+  usersToggle.addEventListener("click",    abrirDrawerUsuarios);
+  usersClose.addEventListener("click",     fecharTudo);
+  // Clicar no overlay fecha tudo
+  overlay.addEventListener("click",        fecharTudo);
+  // Clicar fora do modal (no overlay) também fecha
+  gameModal.addEventListener("click", (e) => { if (e.target === gameModal) fecharModal(); });
 
   // ── Join ───────────────────────────────────────────────────
   function entrar() {
@@ -717,7 +927,6 @@
   nameInput.addEventListener("keydown", e => { if (e.key === "Enter") entrar(); });
 
   // ── WebSocket ──────────────────────────────────────────────
-  // Usa location.host para funcionar tanto local quanto no Render
   function conectar() {
     joinBtn.disabled = true;
     setStatus("connecting");
@@ -752,6 +961,7 @@
       renderizarUsuarios(dados.users);
 
     } else if (dados.type === "game_start") {
+      fecharModal();
       mostrarRevelacao(dados);
 
     } else if (dados.type === "game_end") {
@@ -773,19 +983,18 @@
 
   // ── Revelação ──────────────────────────────────────────────
   function mostrarRevelacao(dados) {
-    fecharTodosDrawers();
     if (dados.isImpostor) {
-      revealScreen.className     = "show impostor";
-      revealCard.className       = "reveal-card impostor";
-      revealRole.textContent     = "👤 Seu papel";
-      revealWord.textContent     = "IMPOSTOR";
-      revealHint.textContent     = "Você não sabe a palavra. Tente convencer os outros de que sabe!";
+      revealScreen.className = "show impostor";
+      revealCard.className   = "reveal-card impostor";
+      revealRole.textContent = "👤 Seu papel";
+      revealWord.textContent = "IMPOSTOR";
+      revealHint.textContent = "Você não sabe a palavra. Tente convencer os outros de que sabe!";
     } else {
-      revealScreen.className     = "show";
-      revealCard.className       = "reveal-card player";
-      revealRole.textContent     = "🟡 A palavra é";
-      revealWord.textContent     = dados.word;
-      revealHint.textContent     = "Não diga a palavra diretamente — um impostor está entre vocês!";
+      revealScreen.className = "show";
+      revealCard.className   = "reveal-card player";
+      revealRole.textContent = "🟡 A palavra é";
+      revealWord.textContent = dados.word;
+      revealHint.textContent = "Não diga a palavra diretamente — há um impostor entre vocês!";
     }
     revealScreen.classList.add("show");
     if (isAdmin) { startGameBtn.style.display = "none"; endGameBtn.style.display = "block"; }
@@ -793,27 +1002,20 @@
   revealClose.addEventListener("click", () => revealScreen.classList.remove("show"));
 
   // ── Gerenciar palavras ─────────────────────────────────────
-
-  // Importa todas as linhas do textarea de uma vez
   function importarLista() {
-    const linhas = wordTextarea.value
-      .split("\n")
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
+    const linhas = wordTextarea.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
     if (!linhas.length) return;
     linhas.forEach(p => ws.send(JSON.stringify({ type: "add_word", word: p.slice(0, 50) })));
     wordTextarea.value = "";
   }
   addWordBtn.addEventListener("click", importarLista);
 
-  // Reseta toda a lista após confirmação
   resetWordsBtn.addEventListener("click", () => {
-    if (confirm("Tem certeza que quer apagar toda a lista de palavras?")) {
+    if (confirm("Apagar toda a lista de palavras?")) {
       ws.send(JSON.stringify({ type: "reset_words" }));
     }
   });
 
-  // Renderiza a lista de palavras no painel
   function renderizarPalavras(palavras) {
     if (!palavras.length) {
       wordListAdmin.innerHTML = `<span style="font-size:.78rem;color:var(--muted);font-family:var(--mono)">Nenhuma palavra ainda.</span>`;
@@ -823,27 +1025,26 @@
     palavras.forEach(p => {
       const tag    = document.createElement("div"); tag.className = "word-tag";
       const texto  = document.createElement("span"); texto.textContent = p;
-      const remover = document.createElement("button"); remover.className = "word-tag-remove"; remover.textContent = "✕";
-      remover.addEventListener("click", () => ws.send(JSON.stringify({ type: "remove_word", word: p })));
-      tag.appendChild(texto); tag.appendChild(remover);
+      const btn    = document.createElement("button"); btn.className = "word-tag-remove"; btn.textContent = "✕";
+      btn.addEventListener("click", () => ws.send(JSON.stringify({ type: "remove_word", word: p })));
+      tag.appendChild(texto); tag.appendChild(btn);
       wordListAdmin.appendChild(tag);
     });
   }
 
-  startGameBtn.addEventListener("click", () => ws.send(JSON.stringify({ type: "start_game" })));
-  endGameBtn.addEventListener("click",   () => ws.send(JSON.stringify({ type: "end_game" })));
+  // Inicia o jogo enviando também a quantidade de impostores
+  startGameBtn.addEventListener("click", () => {
+    ws.send(JSON.stringify({ type: "start_game", numImpostores }));
+  });
+  endGameBtn.addEventListener("click", () => ws.send(JSON.stringify({ type: "end_game" })));
 
   // ── Responder mensagem ─────────────────────────────────────
-
-  // Define a mensagem que está sendo respondida e mostra o preview
   function definirResposta(from, text) {
     replyTarget = { from, text };
     replyPreviewText.innerHTML = `<strong>${from}:</strong> ${text.slice(0, 60)}${text.length > 60 ? "…" : ""}`;
     replyPreview.classList.add("show");
     msgInput.focus();
   }
-
-  // Cancela a resposta
   function cancelarResposta() {
     replyTarget = null;
     replyPreview.classList.remove("show");
@@ -865,39 +1066,27 @@
 
   function adicionarMensagem(dados) {
     const minha = dados.from === myName;
-    const bloco = document.createElement("div");
-    bloco.className = "msg " + (minha ? "mine" : "other");
-
-    // Linha de meta (nome + hora)
-    const meta = document.createElement("div"); meta.className = "msg-meta";
-    const nome = document.createElement("span"); nome.className = "msg-name";
-    nome.style.color = dados.color;
+    const bloco = document.createElement("div"); bloco.className = "msg " + (minha ? "mine" : "other");
+    const meta  = document.createElement("div"); meta.className = "msg-meta";
+    const nome  = document.createElement("span"); nome.className = "msg-name"; nome.style.color = dados.color;
     nome.textContent = minha ? "Você" : dados.from;
-    const hora = document.createElement("span"); hora.textContent = formatarHora(dados.time);
+    const hora  = document.createElement("span"); hora.textContent = formatarHora(dados.time);
     meta.appendChild(nome); meta.appendChild(hora);
 
-    // Bolha
     const bolha = document.createElement("div"); bolha.className = "msg-bubble";
 
-    // Se for uma resposta, mostra a citação dentro da bolha
     if (dados.replyTo) {
-      const cita = document.createElement("div");
-      cita.className = "reply-quote";
+      const cita = document.createElement("div"); cita.className = "reply-quote";
       cita.textContent = `${dados.replyTo.from}: ${dados.replyTo.text.slice(0, 50)}`;
       bolha.appendChild(cita);
     }
 
-    const textoEl = document.createElement("span");
-    textoEl.textContent = dados.text;
+    const textoEl = document.createElement("span"); textoEl.textContent = dados.text;
     bolha.appendChild(textoEl);
 
-    // Dica de resposta que aparece ao hover
-    const hint = document.createElement("span");
-    hint.className = "reply-hint";
-    hint.textContent = "↩ responder";
+    const hint = document.createElement("span"); hint.className = "reply-hint"; hint.textContent = "↩ responder";
     bolha.appendChild(hint);
 
-    // Clicar na bolha define essa mensagem como alvo de resposta
     bolha.addEventListener("click", () => definirResposta(dados.from, dados.text));
 
     bloco.appendChild(meta); bloco.appendChild(bolha);
@@ -928,23 +1117,15 @@
   function enviarMensagem() {
     const texto = msgInput.value.trim();
     if (!texto || !ws || ws.readyState !== 1) return;
-
-    // Inclui os dados de resposta na mensagem, se houver
-    ws.send(JSON.stringify({
-      type: "message",
-      text: texto,
-      replyTo: replyTarget // null se não for resposta
-    }));
-
+    ws.send(JSON.stringify({ type: "message", text: texto, replyTo: replyTarget }));
     msgInput.value = "";
     msgInput.style.height = "auto";
-    cancelarResposta(); // limpa o preview após enviar
+    cancelarResposta();
   }
 
   sendBtn.addEventListener("click", enviarMensagem);
   msgInput.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarMensagem(); }
-    // Esc cancela a resposta
     if (e.key === "Escape") cancelarResposta();
   });
   msgInput.addEventListener("input", () => {
