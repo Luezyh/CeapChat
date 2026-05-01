@@ -29,10 +29,10 @@ let jogoAtivo = false;
 
 // ── Servidor HTTP ─────────────────────────────────────────────
 const httpServer = http.createServer((req, res) => {
-  if (req.url === "/" || req.url === "/index.html") {
-    const filePath = path.join(__dirname, "index.html");
+  if (req.url === "/" || req.url === "/impostor.html") {
+    const filePath = path.join(__dirname, "impostor.html");
     fs.readFile(filePath, (err, data) => {
-      if (err) { res.writeHead(404); res.end("index.html não encontrado."); return; }
+      if (err) { res.writeHead(404); res.end("impostor.html não encontrado."); return; }
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(data);
     });
